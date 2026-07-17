@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/* ============================================================
+   GlowCast — Design tokens (CHARTE_GRAPHIQUE.md)
+   Palette principale : Soft pink + lavender luxury
+   Variante sombre : Premium black + gold (écrans immersifs)
+   Style : Liquid Glass
+   ============================================================ */
+
+:root {
+  --primary: #ec4899;
+  --on-primary: #ffffff;
+  --secondary: #f9a8d4;
+  --accent: #8b5cf6;
+  --background: #fdf2f8;
+  --foreground: #831843;
+  --card: #ffffff;
+  --card-foreground: #831843;
+  --muted: #f1eef5;
+  --muted-foreground: #64748b;
+  --border: #fbcfe8;
+  --destructive: #dc2626;
+  --ring: #ec4899;
+
+  /* Variante sombre premium (écrans caméra & look) */
+  --dark-primary: #1c1917;
+  --dark-secondary: #44403c;
+  --dark-gold: #a16207;
+  --dark-gold-light: #d4a843;
+  --dark-background: #0c0a09;
+  --dark-border: #44403c;
+
+  /* Liquid Glass */
+  --morph-duration: 500ms;
+  --blur-amount: 15px;
+
+  /* Jauges scores */
+  --score-low: #e74c3c;
+  --score-mid: #f5c542;
+  --score-high: #2ecc71;
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-ring: var(--ring);
+  --color-dark-primary: var(--dark-primary);
+  --color-dark-gold: var(--dark-gold);
+  --color-dark-gold-light: var(--dark-gold-light);
+  --color-dark-background: var(--dark-background);
+  --color-dark-border: var(--dark-border);
+  --font-serif: var(--font-playfair), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-playfair), Georgia, serif;
+}
+
+/* ============ Liquid Glass surfaces ============ */
+.glass {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(var(--blur-amount)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(131, 24, 67, 0.08);
+}
+
+.glass-dark {
+  background: rgba(28, 25, 23, 0.6);
+  backdrop-filter: blur(var(--blur-amount)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(1.2);
+  border: 1px solid rgba(161, 98, 7, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Fond iridescent (accueil) */
+.iridescent-bg {
+  background:
+    radial-gradient(60% 80% at 15% 20%, rgba(236, 72, 153, 0.16), transparent 60%),
+    radial-gradient(50% 70% at 85% 15%, rgba(139, 92, 246, 0.14), transparent 60%),
+    radial-gradient(70% 60% at 60% 90%, rgba(249, 168, 212, 0.18), transparent 60%),
+    var(--background);
+}
+
+/* ============ Interactions (charte §4) ============ */
+button, a, [role="button"] {
+  cursor: pointer;
+}
+
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Skeleton loading */
+.skeleton {
+  animation: shimmer 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background: linear-gradient(90deg, var(--muted), #fbe7f1, var(--muted));
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0%, 100% { background-position: 200% 0; }
+  50% { background-position: 0% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
