@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarDays, MapPin, PenLine } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin, PenLine, Check } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
 import WhyWeAskModal from "@/components/WhyWeAskModal";
 import { daysUntil, saveFlow } from "@/lib/flow";
+import { searchCities, getForecast, type CityHit } from "@/lib/weather";
 
 const PLACEHOLDER =
   "e.g. My best friend's wedding, outdoor garden ceremony in the afternoon, " +
@@ -16,42 +17,67 @@ export default function EventLanding() {
   const router = useRouter();
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
-  const [city, setCity] = useState("");
+  const [cityQuery, setCityQuery] = useState("");
+  const [cityHits, setCityHits] = useState<CityHit[]>([]);
+  const [selectedCity, setSelectedCity] = useState<CityHit | null>(null);
   const [errors, setErrors] = useState<{ description?: string; date?: string; city?: string }>({});
   const [submitting, setSubmitting] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const minDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  // City autocomplete: suggestions come from Open-Meteo geocoding, and the
+  // user must pick one — free text alone is never accepted.
+  useEffect(() => {
+    if (selectedCity && cityQuery === cityLabel(selectedCity)) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setCityHits(await searchCities(cityQuery));
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [cityQuery, selectedCity]);
+
+  function cityLabel(c: CityHit) {
+    return `${c.name}${c.admin1 ? `, ${c.admin1}` : ""}, ${c.country}`;
+  }
 
   // Style guide §4.9: validate on blur
   const validateDescription = (v: string) =>
     v.trim().length < 12 ? "Tell us a bit more — at least a full sentence" : undefined;
   const validateDate = (v: string) =>
     !v ? "Pick the date of your event" : v < minDate ? "That date has already passed" : undefined;
-  const validateCity = (v: string) =>
-    v.trim().length < 2 ? "Tell us the city of the event" : undefined;
+  const validateCity = () =>
+    !selectedCity ? "Pick your city from the suggestions" : undefined;
 
   const ready =
     description.trim().length >= 12 &&
     date &&
-    city.trim().length >= 2 &&
+    selectedCity != null &&
     !errors.description &&
-    !errors.date &&
-    !errors.city;
+    !errors.date;
 
   async function start() {
     if (submitting) return;
     const dsErr = validateDescription(description);
     const dErr = validateDate(date);
-    const cErr = validateCity(city);
+    const cErr = validateCity();
     setErrors({ description: dsErr, date: dErr, city: cErr });
-    if (dsErr || dErr || cErr) return;
+    if (dsErr || dErr || cErr || !selectedCity) return;
     setSubmitting(true);
+    // Forecast is only available within 16 days — otherwise we go without it.
+    const weather = await getForecast(selectedCity.lat, selectedCity.lon, date).catch(() => null);
     saveFlow({
       event: {
         description: description.trim(),
         date,
-        city: city.trim(),
+        city: selectedCity.name,
+        country: selectedCity.country,
+        lat: selectedCity.lat,
+        lon: selectedCity.lon,
         daysLeft: daysUntil(date),
+        weather: weather ?? undefined,
       },
     });
     router.push("/selfie");
@@ -93,9 +119,9 @@ export default function EventLanding() {
             Tell us about your event
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Describe it in your own words — the occasion, the setting, the dress
-            code, the mood. The more you share, the better we can tailor your
-            skin plan and your look.
+            Describe it — the occasion, the setting, the dress code, the mood.
+            The more you share, the better we can tailor your skin plan and
+            your look.
           </p>
 
           <div className="mt-5">
@@ -104,7 +130,7 @@ export default function EventLanding() {
               className="flex items-center gap-1.5 text-sm font-medium"
             >
               <PenLine className="w-4 h-4 text-accent" aria-hidden />
-              Your event, in your words
+              Your event
             </label>
             <textarea
               id="event-description"
@@ -145,7 +171,7 @@ export default function EventLanding() {
                 </p>
               )}
             </div>
-            <div>
+            <div className="relative">
               <label htmlFor="event-city" className="flex items-center gap-1.5 text-sm font-medium">
                 <MapPin className="w-4 h-4 text-accent" aria-hidden />
                 City
@@ -153,12 +179,48 @@ export default function EventLanding() {
               <input
                 id="event-city"
                 type="text"
-                placeholder="Paris, New York, Lagos…"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                onBlur={(e) => setErrors((p) => ({ ...p, city: validateCity(e.target.value) }))}
+                autoComplete="off"
+                placeholder="Start typing… e.g. Paris"
+                value={cityQuery}
+                onChange={(e) => {
+                  setCityQuery(e.target.value);
+                  setSelectedCity(null);
+                }}
+                onBlur={() => setErrors((p) => ({ ...p, city: validateCity() }))}
+                aria-expanded={cityHits.length > 0 && !selectedCity}
+                aria-controls="city-suggestions"
                 className="focus-ring mt-1.5 w-full tap-target rounded-xl border border-border bg-card px-3 text-sm placeholder:text-muted-foreground/60"
               />
+              {selectedCity && (
+                <Check
+                  className="absolute right-3 top-[38px] w-4 h-4 text-primary"
+                  aria-hidden
+                />
+              )}
+              {cityHits.length > 0 && !selectedCity && (
+                <ul
+                  id="city-suggestions"
+                  role="listbox"
+                  className="absolute z-20 mt-1 w-full rounded-xl border border-border bg-card shadow-xl overflow-hidden"
+                >
+                  {cityHits.map((c) => (
+                    <li key={`${c.name}-${c.lat}-${c.lon}`} role="option" aria-selected={false}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedCity(c);
+                          setCityQuery(cityLabel(c));
+                          setCityHits([]);
+                          setErrors((p) => ({ ...p, city: undefined }));
+                        }}
+                        className="focus-ring w-full text-left px-3 py-2.5 text-sm hover:bg-muted transition-colors"
+                      >
+                        {cityLabel(c)}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {errors.city && (
                 <p role="alert" className="mt-1 text-xs text-destructive">
                   {errors.city}

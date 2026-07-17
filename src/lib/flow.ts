@@ -4,8 +4,12 @@ export interface EventInfo {
   description: string; // free-text description of the event
   date: string; // ISO yyyy-mm-dd
   city: string;
+  country?: string;
+  lat?: number;
+  lon?: number;
   daysLeft: number;
-  weather?: { tempC: number; condition: string; icon: string };
+  /** Filled from Open-Meteo when the event is within the 16-day forecast window. */
+  weather?: { tempMaxC: number; tempMinC: number; condition: string; precipitationChance?: number };
   // Derived by the AI from the description (filled later)
   parsed?: { kind: string; formality: string; vibe: string };
 }
@@ -42,6 +46,7 @@ export interface FlowState {
   improvedUrl?: string; // skin projection image
   skincarePlan?: string[];
   lookUrl?: string; // current VTO render
+  lookGarmentUrl?: string; // generated garment product shot (example)
   lookPieces?: { kind: string; label: string }[];
 }
 

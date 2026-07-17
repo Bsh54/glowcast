@@ -57,6 +57,7 @@ export default function Look() {
       setReason(data.reason);
       const next = saveFlow({
         lookUrl: data.look,
+        lookGarmentUrl: data.garmentImage ?? undefined,
         lookPieces: [{ kind: "outfit", label: data.pieceLabel }],
       });
       setFlow(next);
@@ -161,9 +162,37 @@ export default function Look() {
             transition={{ duration: 0.5 }}
             className="mt-8 flex flex-col items-center"
           >
-            <div className="relative w-full max-w-sm rounded-3xl overflow-hidden glass">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={flow.lookUrl} alt="The outfit tried on you" className="w-full" />
+            {/* The designed outfit (example) and the render on you, side by side */}
+            <div
+              className={[
+                "w-full grid gap-4",
+                flow.lookGarmentUrl ? "sm:grid-cols-2 max-w-2xl" : "max-w-sm",
+              ].join(" ")}
+            >
+              {flow.lookGarmentUrl && (
+                <figure className="relative rounded-3xl overflow-hidden glass">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={flow.lookGarmentUrl}
+                    alt="The outfit designed for you"
+                    className="w-full h-full object-cover"
+                  />
+                  <figcaption className="absolute top-3 left-3 rounded-full bg-black/50 px-3 py-1 text-xs text-white">
+                    The outfit
+                  </figcaption>
+                </figure>
+              )}
+              <figure className="relative rounded-3xl overflow-hidden glass">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={flow.lookUrl}
+                  alt="The outfit tried on you"
+                  className="w-full h-full object-cover"
+                />
+                <figcaption className="absolute top-3 left-3 rounded-full bg-primary/80 px-3 py-1 text-xs text-white">
+                  On you
+                </figcaption>
+              </figure>
             </div>
 
             {flow.lookPieces?.[0] && (

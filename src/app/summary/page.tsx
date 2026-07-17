@@ -66,6 +66,14 @@ export default function Summary() {
                 {flow.event?.city}
               </span>
             </p>
+            {flow.event?.weather && (
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                {flow.event.weather.condition}, {flow.event.weather.tempMinC}–
+                {flow.event.weather.tempMaxC}°C
+                {flow.event.weather.precipitationChance != null &&
+                  ` · ${flow.event.weather.precipitationChance}% chance of rain`}
+              </p>
+            )}
           </header>
 
           {/* Look + palette */}
