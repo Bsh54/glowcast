@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowRight, Shirt, Wand2, AlertCircle, Send, Upload } from "lucide-react";
+import { ArrowRight, Shirt, Wand2, AlertCircle, Send } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
+import BackButton from "@/components/BackButton";
+import PhotoPicker from "@/components/PhotoPicker";
 import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
 
 /** Screen 5 — the outfit tried on the user (same light theme as the site).
@@ -12,7 +14,6 @@ import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
  *  (error_pose), we ask for a dedicated upper-body photo. */
 export default function Look() {
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [flow, setFlow] = useState<FlowState>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,18 +67,6 @@ export default function Look() {
     }
   }
 
-  function onBodyPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      saveFlow({ lookPhotoDataUrl: dataUrl });
-      requestLook(undefined, dataUrl);
-    };
-    reader.readAsDataURL(file);
-  }
-
   useEffect(() => {
     const f = loadFlow();
     if (!f.selfieDataUrl || !f.palette) {
@@ -98,7 +87,8 @@ export default function Look() {
   const ADJUSTMENTS = ["More formal", "More casual", "Something bolder", "Softer colors"];
 
   return (
-    <main className="iridescent-bg flex-1 flex flex-col">
+    <main className="iridescent-bg relative flex-1 flex flex-col">
+      <BackButton />
       <StepIndicator current={5} />
 
       <div className="flex-1 w-full max-w-3xl mx-auto px-4 pb-16">
@@ -129,27 +119,22 @@ export default function Look() {
           <div role="alert" className="mt-10 mx-auto max-w-md glass rounded-3xl p-6 text-center">
             <AlertCircle className="w-8 h-8 mx-auto text-destructive" aria-hidden />
             <p className="mt-3 text-sm">{error}</p>
+
+            {needsBodyPhoto && (
+              <div className="mt-5">
+                <PhotoPicker
+                  guide="wide"
+                  confirmLabel="Use for the try-on"
+                  onConfirm={(dataUrl) => {
+                    saveFlow({ lookPhotoDataUrl: dataUrl });
+                    requestLook(undefined, dataUrl);
+                  }}
+                />
+              </div>
+            )}
+
             <div className="mt-5 flex flex-wrap justify-center gap-3">
-              {needsBodyPhoto ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-accent px-5 py-2.5 text-sm font-semibold text-on-primary shadow-lg shadow-accent/25"
-                  >
-                    <Upload className="w-4 h-4" aria-hidden />
-                    Upload an upper-body photo
-                  </button>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    onChange={onBodyPhoto}
-                    className="sr-only"
-                    aria-label="Upload an upper-body photo for the try-on"
-                  />
-                </>
-              ) : (
+              {!needsBodyPhoto && (
                 <button
                   type="button"
                   onClick={() => requestLook()}

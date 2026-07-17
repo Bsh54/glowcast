@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CalendarDays, MapPin, Printer, RotateCcw, Sparkles, Shirt } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
+import BackButton from "@/components/BackButton";
 import { loadFlow, resetFlow, type FlowState } from "@/lib/flow";
 
 /** Screen 6 — editorial summary card the user can keep (print/screenshot). */
@@ -33,7 +34,8 @@ export default function Summary() {
 
   return (
     <main className="iridescent-bg flex-1 flex flex-col">
-      <div className="print:hidden">
+      <div className="print:hidden relative">
+        <BackButton href="/look" />
         <StepIndicator current={6} />
       </div>
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
+import BackButton from "@/components/BackButton";
 import ScoreGauge from "@/components/ScoreGauge";
 import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
 
@@ -91,7 +92,8 @@ export default function Diagnosis() {
   const nextStep = (flow.event?.daysLeft ?? 0) >= 3 ? "/projection" : "/look";
 
   return (
-    <main className="iridescent-bg flex-1 flex flex-col">
+    <main className="iridescent-bg relative flex-1 flex flex-col">
+      <BackButton href="/selfie" />
       <StepIndicator current={3} />
 
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 pb-16">

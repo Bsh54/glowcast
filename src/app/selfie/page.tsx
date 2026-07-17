@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Camera, Upload, RefreshCw, Check, AlertCircle } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
+import BackButton from "@/components/BackButton";
 import { loadFlow, saveFlow } from "@/lib/flow";
 
 /** Screen 2 — guided selfie capture (same light theme as the whole site).
@@ -77,7 +78,8 @@ export default function SelfieCapture() {
   }
 
   return (
-    <main className="iridescent-bg flex-1 flex flex-col">
+    <main className="iridescent-bg relative flex-1 flex flex-col">
+      <BackButton href="/" />
       <StepIndicator current={2} />
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
@@ -94,7 +96,7 @@ export default function SelfieCapture() {
           </p>
         </motion.div>
 
-        <div className="relative mt-4 w-full max-w-[240px] sm:max-w-[280px] aspect-[3/4] rounded-3xl overflow-hidden glass max-h-[45vh]">
+        <div className="relative mt-4 w-full max-w-[300px] sm:max-w-[340px] aspect-[3/4] rounded-3xl overflow-hidden glass max-h-[55vh]">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview} alt="Your selfie preview" className="w-full h-full object-cover" />

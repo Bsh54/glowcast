@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, AlertCircle, ChevronsLeftRight } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
+import BackButton from "@/components/BackButton";
 import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
 
 /** Screen 4 — before/after skin projection. The divider line is draggable
@@ -65,7 +66,8 @@ export default function Projection() {
   }
 
   return (
-    <main className="iridescent-bg flex-1 flex flex-col">
+    <main className="iridescent-bg relative flex-1 flex flex-col">
+      <BackButton href="/diagnosis" />
       <StepIndicator current={4} />
 
       <div className="flex-1 w-full max-w-3xl mx-auto px-4 pb-16">
@@ -79,10 +81,25 @@ export default function Projection() {
 
         {loading && (
           <div className="mt-10 flex flex-col items-center gap-4" aria-live="polite">
-            <div className="skeleton w-full max-w-md aspect-[4/3] rounded-3xl" />
-            <p className="text-sm text-muted-foreground">
-              Projecting your glow… this can take up to a minute.
-            </p>
+            <div className="relative w-full max-w-md aspect-[4/3] rounded-3xl overflow-hidden glass">
+              {flow.selfieDataUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={flow.selfieDataUrl}
+                  alt=""
+                  className="w-full h-full object-cover opacity-30 blur-[2px]"
+                />
+              )}
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                <div className="relative w-16 h-16">
+                  <div className="absolute inset-0 rounded-full border-4 border-primary/25 border-t-primary animate-spin" />
+                  <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-accent animate-pulse" aria-hidden />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Projecting your glow… this can take up to a minute.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
