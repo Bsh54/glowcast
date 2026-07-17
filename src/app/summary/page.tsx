@@ -96,17 +96,11 @@ export default function Summary() {
                   />
                 )
               )}
-              {flow.lookPieces && flow.lookPieces.length > 0 && (
-                <ul className="mt-3 space-y-1.5">
-                  {flow.lookPieces
-                    .filter((p) => p.applied !== false)
-                    .map((p) => (
-                      <li key={p.label} className="flex items-center gap-2 text-sm">
-                        <Shirt className="w-4 h-4 text-accent shrink-0" aria-hidden />
-                        <span className="font-medium">{p.label}</span>
-                      </li>
-                    ))}
-                </ul>
+              {flow.lookPieces?.[0] && (
+                <p className="mt-3 flex items-center gap-2 text-sm">
+                  <Shirt className="w-4 h-4 text-accent" aria-hidden />
+                  <span className="font-medium">{flow.lookPieces[0].label}</span>
+                </p>
               )}
             </div>
 

@@ -55,15 +55,9 @@ export default function Look() {
       }
       setTried((p) => [...p, data.templateId]);
       setReason(data.reason);
-      interface PieceOut { type: string; label: string; image: string | null; applied: boolean }
       const next = saveFlow({
         lookUrl: data.look,
-        lookPieces: ((data.pieces ?? []) as PieceOut[]).map((p) => ({
-          kind: p.type,
-          label: p.label,
-          image: p.image ?? undefined,
-          applied: p.applied,
-        })),
+        lookPieces: [{ kind: "outfit", label: data.pieceLabel }],
       });
       setFlow(next);
     } catch (e) {
@@ -195,61 +189,21 @@ export default function Look() {
             transition={{ duration: 0.5 }}
             className="mt-8 flex flex-col items-center"
           >
-            {(() => {
-              const withImages = (flow.lookPieces ?? []).filter((p) => p.image);
-              return (
-                <div className="w-full max-w-2xl grid gap-4 sm:grid-cols-[1fr_1.8fr] items-start">
-                  {/* The pieces designed for this event (only what fits) */}
-                  {withImages.length > 0 && (
-                    <div className="grid gap-3">
-                      {withImages.map((p) => (
-                        <figure
-                          key={p.label}
-                          className="relative rounded-3xl overflow-hidden glass"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={p.image}
-                            alt={p.label}
-                            className="w-full aspect-square object-cover"
-                          />
-                          <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-3 pb-2 pt-6 text-xs text-white">
-                            {p.label}
-                            {p.applied === false && " (couldn't be applied)"}
-                          </figcaption>
-                        </figure>
-                      ))}
-                    </div>
-                  )}
-                  {/* The render on you */}
-                  <figure
-                    className={[
-                      "relative rounded-3xl overflow-hidden glass",
-                      withImages.length === 0 ? "sm:col-span-2 max-w-sm mx-auto" : "",
-                    ].join(" ")}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={flow.lookUrl}
-                      alt="The look tried on you"
-                      className="w-full object-cover"
-                    />
-                    <figcaption className="absolute top-3 left-3 rounded-full bg-primary/80 px-3 py-1 text-xs text-white">
-                      On you
-                    </figcaption>
-                  </figure>
-                </div>
-              );
-            })()}
+            <figure className="relative w-full max-w-md rounded-3xl overflow-hidden glass">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={flow.lookUrl}
+                alt="Your complete look tried on you"
+                className="w-full object-cover"
+              />
+              <figcaption className="absolute top-3 left-3 rounded-full bg-primary/80 px-3 py-1 text-xs text-white">
+                On you
+              </figcaption>
+            </figure>
 
             {flow.lookPieces && flow.lookPieces.length > 0 && (
               <p className="mt-4 text-center">
-                <span className="text-primary font-semibold">
-                  {flow.lookPieces
-                    .filter((p) => p.applied !== false)
-                    .map((p) => p.label)
-                    .join(" · ")}
-                </span>
+                <span className="text-primary font-semibold">{flow.lookPieces[0].label}</span>
                 {reason && (
                   <span className="block mt-1 text-sm text-muted-foreground max-w-sm">
                     {reason}
