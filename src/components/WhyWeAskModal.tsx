@@ -37,27 +37,35 @@ export default function WhyWeAskModal() {
             <div className="flex items-center gap-2.5">
               <ShieldCheck className="w-5 h-5 text-accent" aria-hidden />
               <h2 id="why-title" className="text-lg">
-                Why we ask
+                Welcome to GlowCast
               </h2>
             </div>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              Along the way, we&apos;ll ask you for a few things — and here&apos;s
+              why each one matters:
+            </p>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground leading-relaxed">
               <li>
-                <span className="font-semibold text-foreground">Your event description</span>{" "}
-                sets the dress code and mood of your look.
+                <span className="font-semibold text-foreground">Your event</span> — so your
+                look matches the dress code and the mood.
               </li>
               <li>
-                <span className="font-semibold text-foreground">The date</span> lets us build
-                a skincare plan that fits the time you have left.
+                <span className="font-semibold text-foreground">The date</span> — so your
+                skincare plan fits the time you have left.
               </li>
               <li>
-                <span className="font-semibold text-foreground">The city</span> gives us the
-                weather, so your outfit works on the day.
+                <span className="font-semibold text-foreground">The city</span> — so your
+                outfit works with the weather on the day.
               </li>
               <li>
-                <span className="font-semibold text-foreground">Your selfie</span> is only
-                used for the analysis you request — nothing is stored beyond your session.
+                <span className="font-semibold text-foreground">A selfie</span> — so we can
+                read your skin and your colors, just for you.
               </li>
             </ul>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              And don&apos;t worry — everything stays in your session, nothing is
+              stored, nothing is shared. It&apos;s all only used to get you ready.
+            </p>
             <button
               type="button"
               onClick={() => setOpen(false)}
