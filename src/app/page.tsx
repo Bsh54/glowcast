@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, CalendarDays, MapPin, PenLine, Check } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
 import WhyWeAskModal from "@/components/WhyWeAskModal";
-import { daysUntil, saveFlow } from "@/lib/flow";
+import { daysUntil, startNewEvent } from "@/lib/flow";
 import { searchCities, getForecast, type CityHit } from "@/lib/weather";
 
 const PLACEHOLDER =
@@ -68,17 +68,15 @@ export default function EventLanding() {
     setSubmitting(true);
     // Forecast is only available within 16 days — otherwise we go without it.
     const weather = await getForecast(selectedCity.lat, selectedCity.lon, date).catch(() => null);
-    saveFlow({
-      event: {
-        description: description.trim(),
-        date,
-        city: selectedCity.name,
-        country: selectedCity.country,
-        lat: selectedCity.lat,
-        lon: selectedCity.lon,
-        daysLeft: daysUntil(date),
-        weather: weather ?? undefined,
-      },
+    startNewEvent({
+      description: description.trim(),
+      date,
+      city: selectedCity.name,
+      country: selectedCity.country,
+      lat: selectedCity.lat,
+      lon: selectedCity.lon,
+      daysLeft: daysUntil(date),
+      weather: weather ?? undefined,
     });
     router.push("/selfie");
   }

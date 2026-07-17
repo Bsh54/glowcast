@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Camera, Upload, RefreshCw, Check, AlertCircle } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
 import BackButton from "@/components/BackButton";
-import { loadFlow, saveFlow } from "@/lib/flow";
+import { loadFlow, setSelfie } from "@/lib/flow";
 import { autoCropFace } from "@/lib/facecrop";
 import { downscaleDataUrl } from "@/lib/resize";
 
@@ -86,7 +86,7 @@ export default function SelfieCapture() {
     // Smart crop around the face (when supported) so the photo passes the
     // analysis framing requirements more reliably.
     const framed = await downscaleDataUrl(await autoCropFace(preview));
-    saveFlow({ selfieDataUrl: framed });
+    setSelfie(framed);
     router.push("/diagnosis");
   }
 

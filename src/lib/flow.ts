@@ -148,6 +148,44 @@ export function saveFlow(patch: Partial<FlowState>): FlowState {
   return memoryFlow;
 }
 
+/** Fields derived from the selfie/diagnosis — anything downstream of a step
+ *  that gets redone must be invalidated so no stale result is ever shown. */
+const DOWNSTREAM_OF_EVENT: (keyof FlowState)[] = [
+  "eventTitle", "selfieDataUrl", "lookPhotoDataUrl", "scores", "insights",
+  "globalScore", "tone", "palette", "improvedUrl", "skincarePlan", "planMode",
+  "looks", "lookReason",
+];
+const DOWNSTREAM_OF_SELFIE: (keyof FlowState)[] = [
+  "scores", "insights", "globalScore", "tone", "palette", "improvedUrl",
+  "skincarePlan", "planMode", "looks", "lookReason", "eventTitle",
+];
+const DOWNSTREAM_OF_FITTING_PHOTO: (keyof FlowState)[] = ["looks", "lookReason"];
+
+function invalidate(fields: (keyof FlowState)[]): void {
+  const next = { ...memoryFlow };
+  for (const f of fields) delete next[f];
+  memoryFlow = next;
+  idbSet(memoryFlow).catch(() => {});
+}
+
+/** A new event starts a fresh journey — everything downstream is cleared. */
+export function startNewEvent(event: EventInfo): FlowState {
+  invalidate(DOWNSTREAM_OF_EVENT);
+  return saveFlow({ event });
+}
+
+/** A new selfie invalidates every analysis derived from the previous one. */
+export function setSelfie(dataUrl: string): FlowState {
+  invalidate(DOWNSTREAM_OF_SELFIE);
+  return saveFlow({ selfieDataUrl: dataUrl });
+}
+
+/** A new fitting photo invalidates previously rendered looks. */
+export function setFittingPhoto(dataUrl: string): FlowState {
+  invalidate(DOWNSTREAM_OF_FITTING_PHOTO);
+  return saveFlow({ lookPhotoDataUrl: dataUrl });
+}
+
 export function resetFlow() {
   memoryFlow = {};
   idbClear().catch(() => {});

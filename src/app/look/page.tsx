@@ -8,7 +8,7 @@ import StepIndicator from "@/components/StepIndicator";
 import BackButton from "@/components/BackButton";
 import PhotoPicker from "@/components/PhotoPicker";
 import LookCard from "@/components/LookCard";
-import { loadFlow, saveFlow, type FlowState, type LookImage } from "@/lib/flow";
+import { loadFlow, saveFlow, setFittingPhoto, type FlowState, type LookImage } from "@/lib/flow";
 
 /** Screen 5 — four looks rendered on the user, shown together.
  *  Nothing to pick: the four directions ARE the result. */
@@ -111,7 +111,7 @@ export default function Look() {
                 guide="wide"
                 confirmLabel="Use for the fitting"
                 onConfirm={(dataUrl) => {
-                  saveFlow({ lookPhotoDataUrl: dataUrl });
+                  setFittingPhoto(dataUrl);
                   setNeedsPhotoIntro(false);
                   requestLooks(undefined, dataUrl);
                 }}
@@ -150,7 +150,7 @@ export default function Look() {
                   guide="wide"
                   confirmLabel="Use for the fitting"
                   onConfirm={(dataUrl) => {
-                    saveFlow({ lookPhotoDataUrl: dataUrl });
+                    setFittingPhoto(dataUrl);
                     requestLooks(undefined, dataUrl);
                   }}
                 />
