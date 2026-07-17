@@ -51,23 +51,38 @@ export interface FlowState {
 
 const KEY = "glowcast-flow";
 
+// Photos as data URLs can exceed the sessionStorage quota (~5MB). The
+// in-memory copy is always authoritative; sessionStorage is best-effort
+// so the flow survives a reload when it fits.
+let memoryFlow: FlowState | null = null;
+
 export function loadFlow(): FlowState {
   if (typeof window === "undefined") return {};
+  if (memoryFlow) return memoryFlow;
   try {
-    return JSON.parse(sessionStorage.getItem(KEY) ?? "{}");
+    memoryFlow = JSON.parse(sessionStorage.getItem(KEY) ?? "{}");
   } catch {
-    return {};
+    memoryFlow = {};
   }
+  return memoryFlow ?? {};
 }
 
 export function saveFlow(patch: Partial<FlowState>): FlowState {
   const next = { ...loadFlow(), ...patch };
-  sessionStorage.setItem(KEY, JSON.stringify(next));
+  memoryFlow = next;
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify(next));
+  } catch {
+    // Quota exceeded — keep the in-memory copy and move on.
+  }
   return next;
 }
 
 export function resetFlow() {
-  sessionStorage.removeItem(KEY);
+  memoryFlow = null;
+  try {
+    sessionStorage.removeItem(KEY);
+  } catch {}
 }
 
 export function daysUntil(dateIso: string): number {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Upload, RefreshCw, Check, AlertCircle } from "lucide-react";
+import { downscaleDataUrl } from "@/lib/resize";
 
 /** Reusable photo input: camera capture or file upload, returns a data URL.
  *  Used on step 5 when the try-on needs a wider, upper-body photo. */
@@ -117,7 +118,7 @@ export default function PhotoPicker({
             </button>
             <button
               type="button"
-              onClick={() => onConfirm(preview)}
+              onClick={async () => onConfirm(await downscaleDataUrl(preview))}
               className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-on-primary shadow-lg shadow-accent/25"
             >
               <Check className="w-4 h-4" aria-hidden />

@@ -112,8 +112,7 @@ export default function Look() {
             <h2 className="text-lg">One photo for the fitting</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               The try-on works best with a photo where your upper body is
-              visible (shoulders to waist, or full body). Take one or upload
-              one — or use your selfie if it&apos;s wide enough.
+              visible (shoulders to waist, or full body). Take one or upload one.
             </p>
             <div className="mt-5">
               <PhotoPicker
@@ -126,16 +125,6 @@ export default function Look() {
                 }}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setNeedsPhotoIntro(false);
-                requestLook(undefined, loadFlow().selfieDataUrl);
-              }}
-              className="focus-ring tap-target mt-4 rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium hover:border-primary/50"
-            >
-              Use my selfie instead
-            </button>
           </div>
         )}
 

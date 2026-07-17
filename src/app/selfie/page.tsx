@@ -8,6 +8,7 @@ import StepIndicator from "@/components/StepIndicator";
 import BackButton from "@/components/BackButton";
 import { loadFlow, saveFlow } from "@/lib/flow";
 import { autoCropFace } from "@/lib/facecrop";
+import { downscaleDataUrl } from "@/lib/resize";
 
 /** Screen 2 — guided selfie capture (same light theme as the whole site).
  *  Compact layout: preview and buttons fit without scrolling. */
@@ -76,7 +77,7 @@ export default function SelfieCapture() {
     if (!preview) return;
     // Smart crop around the face (when supported) so the photo passes the
     // analysis framing requirements more reliably.
-    const framed = await autoCropFace(preview);
+    const framed = await downscaleDataUrl(await autoCropFace(preview));
     saveFlow({ selfieDataUrl: framed });
     router.push("/diagnosis");
   }
