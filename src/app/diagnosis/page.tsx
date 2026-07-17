@@ -33,6 +33,7 @@ export default function Diagnosis() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [msgIdx, setMsgIdx] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
   const ran = useRef(false);
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function Diagnosis() {
         }
         const next = saveFlow({
           scores: data.scores,
+          insights: data.insights,
           globalScore: data.globalScore,
           eventTitle: data.eventTitle,
           tone: data.tone,
@@ -164,10 +166,15 @@ export default function Diagnosis() {
               </p>
             </div>
 
-            {/* Right column: gauges */}
+            {/* Right column: gauges (tap one to see where it was detected) */}
             <div className="glass rounded-3xl p-6">
-              <h2 className="text-xl">Concern by concern</h2>
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-xl">Concern by concern</h2>
+                <p className="text-xs text-muted-foreground">
+                  Tap a score to see where it was detected on your face
+                </p>
+              </div>
+              <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-6">
                 {Object.entries(flow.scores).map(([key, v], i) => (
                   <motion.div
                     key={key}
@@ -175,10 +182,54 @@ export default function Diagnosis() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: i * 0.07 }}
                   >
-                    <ScoreGauge label={CONCERN_LABELS[key] ?? key} value={v.ui_score} />
+                    <button
+                      type="button"
+                      onClick={() => v.maskUrl && setSelected(selected === key ? null : key)}
+                      aria-pressed={selected === key}
+                      className={[
+                        "focus-ring w-full rounded-2xl p-1 transition-colors duration-200",
+                        v.maskUrl ? "hover:bg-muted/60" : "cursor-default",
+                        selected === key ? "bg-muted" : "",
+                      ].join(" ")}
+                    >
+                      <ScoreGauge label={CONCERN_LABELS[key] ?? key} value={v.ui_score} />
+                    </button>
+                    {flow.insights?.[key] && (
+                      <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground text-center px-1">
+                        {flow.insights[key]}
+                      </p>
+                    )}
                   </motion.div>
                 ))}
               </div>
+
+              {/* Mask viewer: the analyzed photo with the concern highlighted */}
+              {selected && flow.scores[selected]?.maskUrl && (
+                <motion.figure
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="mt-5 overflow-hidden"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={flow.scores[selected].maskUrl}
+                    alt={`Areas of ${CONCERN_LABELS[selected] ?? selected} detected on your face`}
+                    className="w-full max-w-sm mx-auto rounded-2xl"
+                  />
+                  <figcaption className="mt-2 text-xs text-muted-foreground text-center">
+                    Highlighted: where {(CONCERN_LABELS[selected] ?? selected).toLowerCase()} was
+                    detected on your photo.
+                  </figcaption>
+                </motion.figure>
+              )}
+
+              <p className="mt-5 text-[11px] leading-relaxed text-muted-foreground/80 border-t border-border pt-3">
+                How is this measured? Your photo is analyzed by YouCam&apos;s skin AI —
+                the same engine used by 800+ beauty brands. Each concern is scored
+                from the image (1–100, higher is better) and mapped to the exact
+                facial areas shown above. It&apos;s a cosmetic reading, not a medical
+                diagnosis.
+              </p>
             </div>
 
             {/* Palette — full width */}

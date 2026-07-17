@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadImage, runTask } from "@/lib/youcam";
 import { deepseekJson } from "@/lib/deepseek";
-import { dataUrlToBuffer } from "@/lib/image";
+import { dataUrlToBuffer, urlToDataUrl } from "@/lib/image";
 import { cleanText, cleanHexList } from "@/lib/guard";
 
 export const maxDuration = 300;
@@ -32,6 +32,7 @@ interface PaletteAI {
   description: string;
   title: string;
   event: { kind: string; formality: string; vibe: string };
+  insights: Record<string, string>;
 }
 
 export async function POST(req: NextRequest) {
@@ -99,13 +100,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Mask URLs are signed S3 links that expire in ~2h — re-encode them as
+    // data URLs so the client can show them at any time.
+    await Promise.all(
+      Object.entries(scores).map(async ([, v]) => {
+        if (v.maskUrl) {
+          try {
+            v.maskUrl = await urlToDataUrl(v.maskUrl);
+          } catch {
+            v.maskUrl = undefined;
+          }
+        }
+      })
+    );
+
     const toneResults = tone.results as { color?: Record<string, string> };
     const color = toneResults?.color ?? {};
+
+    const scoreList = Object.entries(scores)
+      .map(([k, v]) => `${k}: ${v.ui_score}/100`)
+      .join(", ");
 
     const ai = await deepseekJson<PaletteAI>(
       "You are a professional color analyst and event stylist. Reply with strict JSON only.",
       `Facial colors of the user (hex): skin ${color.skin_color}, eyes ${color.eye_color} (${color.eye_color_name}), lips ${color.lip_color}, eyebrows ${color.eyebrow_color}, hair ${color.hair_color} (${color.hair_color_name}).
 Event described by the user: "${event?.description ?? "not provided"}" in ${event?.city ?? "?"} in ${event?.daysLeft ?? "?"} days.
+Skin scan scores (higher is better): ${scoreList}.
 
 Return JSON:
 {
@@ -114,7 +134,8 @@ Return JSON:
  "avoid": ["3 hex colors to avoid"],
  "description": "2 elegant sentences, addressed to the user (\\"you\\"), explaining their undertone and what flatters them; only mention features actually present in the data",
  "title": "a short elegant English title for this event, max 5 words, title case (e.g. 'Beach Day with Friends')",
- "event": {"kind": "wedding|interview|party|date|shoot|gala|other", "formality": "casual|smart-casual|semi-formal|formal|black-tie", "vibe": "3-5 words describing the desired mood"}
+ "event": {"kind": "wedding|interview|party|date|shoot|gala|other", "formality": "casual|smart-casual|semi-formal|formal|black-tie", "vibe": "3-5 words describing the desired mood"},
+ "insights": {"<concern key exactly as given>": "one warm plain-language sentence (max 90 chars), addressed to the user, saying what this score means and the single most useful action — one entry for EVERY score listed"}
 }`
     );
 
@@ -136,6 +157,12 @@ Return JSON:
       },
       parsedEvent: ai.event,
       eventTitle: cleanText(ai.title, 48, "Your Big Day"),
+      insights: Object.fromEntries(
+        Object.keys(scores).map((k) => [
+          k,
+          cleanText(ai.insights?.[k], 110, "A solid area — keep up your current routine."),
+        ])
+      ),
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown_error";

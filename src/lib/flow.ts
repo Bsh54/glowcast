@@ -57,6 +57,7 @@ export interface FlowState {
   selfieDataUrl?: string; // captured selfie as base64
   lookPhotoDataUrl?: string; // optional upper-body photo used for the try-on
   scores?: SkinScores;
+  insights?: Record<string, string>; // one-line plain-language note per concern
   globalScore?: number;
   tone?: ToneColors;
   palette?: Palette;
