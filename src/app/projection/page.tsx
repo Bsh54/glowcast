@@ -7,7 +7,6 @@ import { ArrowRight, Sparkles, AlertCircle, ChevronsLeftRight } from "lucide-rea
 import StepIndicator from "@/components/StepIndicator";
 import BackButton from "@/components/BackButton";
 import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
-import PlanTimeline from "@/components/PlanTimeline";
 
 /** Screen 4 — before/after skin projection. The divider line is draggable
  *  directly on the image (plus a hidden range input for keyboard access). */
@@ -195,16 +194,10 @@ export default function Projection() {
               className="sr-only"
             />
 
-            {/* Skincare plan */}
-            {flow.skincarePlan && flow.skincarePlan.length > 0 && (
-              <div className="glass mt-8 rounded-3xl p-6">
-                <h2 className="flex items-center gap-2 text-xl">
-                  <Sparkles className="w-5 h-5 text-accent" aria-hidden />
-                  Your {flow.planMode === "daily" ? "day-by-day" : "step-by-step"} plan until the big day
-                </h2>
-                <PlanTimeline entries={flow.skincarePlan} />
-              </div>
-            )}
+            <p className="mt-6 text-sm text-muted-foreground text-center">
+              Your full skincare plan until the big day will be waiting in your
+              final summary.
+            </p>
 
             <div className="mt-8 flex justify-center">
               <button

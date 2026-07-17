@@ -66,9 +66,7 @@ export default function Summary() {
               GlowCast · Your event plan
             </p>
             <h1 className="mt-2 text-2xl sm:text-3xl leading-snug">
-              {flow.event?.description && flow.event.description.length > 90
-                ? flow.event.description.slice(0, 90) + "…"
-                : flow.event?.description}
+              {flow.eventTitle ?? "Your Big Day"}
             </h1>
             <p className="mt-3 flex items-center justify-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">

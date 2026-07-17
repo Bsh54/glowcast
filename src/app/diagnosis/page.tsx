@@ -72,6 +72,7 @@ export default function Diagnosis() {
         const next = saveFlow({
           scores: data.scores,
           globalScore: data.globalScore,
+          eventTitle: data.eventTitle,
           tone: data.tone,
           palette: data.palette,
           event: f.event ? { ...f.event, parsed: data.parsedEvent } : f.event,

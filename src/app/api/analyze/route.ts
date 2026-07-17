@@ -30,6 +30,7 @@ interface PaletteAI {
   colors: string[];
   avoid: string[];
   description: string;
+  title: string;
   event: { kind: string; formality: string; vibe: string };
 }
 
@@ -111,7 +112,8 @@ Return JSON:
  "season": "Spring|Summer|Autumn|Winter",
  "colors": ["8 hex colors that flatter this person"],
  "avoid": ["3 hex colors to avoid"],
- "description": "2 elegant sentences, addressed to the user (\\"you\\"), explaining their undertone and what flatters them",
+ "description": "2 elegant sentences, addressed to the user (\\"you\\"), explaining their undertone and what flatters them; only mention features actually present in the data",
+ "title": "a short elegant English title for this event, max 5 words, title case (e.g. 'Beach Day with Friends')",
  "event": {"kind": "wedding|interview|party|date|shoot|gala|other", "formality": "casual|smart-casual|semi-formal|formal|black-tie", "vibe": "3-5 words describing the desired mood"}
 }`
     );
@@ -133,6 +135,7 @@ Return JSON:
         ),
       },
       parsedEvent: ai.event,
+      eventTitle: cleanText(ai.title, 48, "Your Big Day"),
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown_error";

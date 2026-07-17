@@ -50,6 +50,7 @@ export interface PlanEntry {
 
 export interface FlowState {
   event?: EventInfo;
+  eventTitle?: string; // short AI-generated title for the event
   selfieDataUrl?: string; // captured selfie as base64
   lookPhotoDataUrl?: string; // optional upper-body photo used for the try-on
   scores?: SkinScores;
