@@ -26,6 +26,12 @@ export default function Projection() {
       router.replace("/");
       return;
     }
+    // The projection step is skipped for very close events (the flow goes
+    // diagnosis → look). Direct URL access must follow the same rule.
+    if ((f.event?.daysLeft ?? 0) < 3) {
+      router.replace("/look");
+      return;
+    }
     setFlow(f);
     if (f.improvedUrl && f.skincarePlan) {
       setLoading(false);
