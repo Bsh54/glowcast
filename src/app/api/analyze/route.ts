@@ -3,6 +3,7 @@ import { uploadImage, runTask } from "@/lib/youcam";
 import { deepseekJson } from "@/lib/deepseek";
 import { dataUrlToBuffer, urlToDataUrl } from "@/lib/image";
 import { cleanText, cleanHexList } from "@/lib/guard";
+import { SKINCARE_KNOWLEDGE } from "@/lib/skincare-knowledge";
 
 export const maxDuration = 300;
 
@@ -122,7 +123,15 @@ export async function POST(req: NextRequest) {
       .join(", ");
 
     const ai = await deepseekJson<PaletteAI>(
-      "You are a professional color analyst and event stylist. Reply with strict JSON only.",
+      `You are a professional color analyst and event stylist. Reply with strict JSON only.
+For the "insights" field you are also a skincare coach strictly grounded in the
+dermatology reference below: any product advice must name an ingredient and its
+concentration from the reference (e.g. "niacinamide 5%"), and respect the
+pre-event timeline (no new actives close to the event). For scores of 80+,
+simply affirm the strength — do not invent advice where none is needed.
+
+DERMATOLOGY REFERENCE:
+${SKINCARE_KNOWLEDGE}`,
       `Facial colors of the user (hex): skin ${color.skin_color}, eyes ${color.eye_color} (${color.eye_color_name}), lips ${color.lip_color}, eyebrows ${color.eyebrow_color}, hair ${color.hair_color} (${color.hair_color_name}).
 Event described by the user: "${event?.description ?? "not provided"}" in ${event?.city ?? "?"} in ${event?.daysLeft ?? "?"} days.
 Skin scan scores (higher is better): ${scoreList}.
@@ -158,9 +167,15 @@ Return JSON:
       parsedEvent: ai.event,
       eventTitle: cleanText(ai.title, 48, "Your Big Day"),
       insights: Object.fromEntries(
-        Object.keys(scores).map((k) => [
+        Object.entries(scores).map(([k, v]) => [
           k,
-          cleanText(ai.insights?.[k], 110, "A solid area — keep up your current routine."),
+          cleanText(
+            ai.insights?.[k],
+            130,
+            v.ui_score >= 70
+              ? "One of your strengths — nothing to change here."
+              : "An area to nurture — gentle care and hydration will help."
+          ),
         ])
       ),
     });
