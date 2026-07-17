@@ -67,7 +67,13 @@ export async function POST(req: NextRequest) {
     }
 
     const results = skin.results as {
-      output?: { type: string; ui_score: number; raw_score: number; mask_urls?: string[] }[];
+      output?: {
+        type: string;
+        ui_score: number;
+        raw_score: number;
+        score?: number; // used by the "all" and "skin_age" entries
+        mask_urls?: string[];
+      }[];
     };
     // The output also contains technical entries ("all", "skin_age",
     // "resize_image") — keep only the requested concerns as gauges.
@@ -75,7 +81,7 @@ export async function POST(req: NextRequest) {
     let globalScore: number | undefined;
     for (const o of results?.output ?? []) {
       if (o.type === "all") {
-        globalScore = o.ui_score;
+        globalScore = o.score != null ? Math.round(o.score) : undefined;
       } else if (SD_ACTIONS.includes(o.type)) {
         scores[o.type] = {
           ui_score: o.ui_score,
