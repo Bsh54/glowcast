@@ -1,16 +1,16 @@
 /**
- * Client serveur YouCam API v2 — logique validée par les tests réels (TEST_RESULTS.md).
- * IMPORTANT :
- *  - un file_id n'est PAS réutilisable entre features → upload par feature
- *  - polling continu obligatoire sinon la tâche expire (InvalidTaskId, unités perdues)
- *  - shoes/bag exigent ref_file_id + gender ; hair-color exige pattern + palettes
+ * Server-side YouCam API v2 client — logic validated by real tests (TEST_RESULTS.md).
+ * IMPORTANT:
+ *  - a file_id is NOT reusable across features → one upload per feature
+ *  - continuous polling is mandatory or the task expires (InvalidTaskId, units lost)
+ *  - shoes/bag require ref_file_id + gender; hair-color requires pattern + palettes
  */
 
 const BASE = "https://yce-api-01.makeupar.com/s2s/v2.0";
 
 function authHeaders(): Record<string, string> {
   const key = process.env.YOUCAM_API_KEY;
-  if (!key) throw new Error("YOUCAM_API_KEY manquante dans les variables d'environnement");
+  if (!key) throw new Error("YOUCAM_API_KEY is missing from environment variables");
   return { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
 }
 
@@ -29,7 +29,7 @@ async function api(method: string, path: string, body?: unknown) {
   return json;
 }
 
-/** Upload une image (buffer) pour une feature donnée. Retourne le file_id. */
+/** Uploads an image (buffer) for a given feature. Returns the file_id. */
 export async function uploadImage(
   feature: string,
   data: ArrayBuffer,
@@ -40,14 +40,14 @@ export async function uploadImage(
     files: [{ content_type: contentType, file_name: fileName, file_size: data.byteLength }],
   });
   const file = (init.data ?? init.result)?.files?.[0];
-  if (!file) throw new Error(`Upload init échoué pour ${feature}`);
+  if (!file) throw new Error(`Upload init failed for ${feature}`);
   const req = file.requests?.[0] ?? { url: file.url, headers: file.headers, method: "PUT" };
   const put = await fetch(req.url, {
     method: req.method ?? "PUT",
     headers: req.headers ?? { "Content-Type": contentType },
     body: data,
   });
-  if (!put.ok) throw new Error(`PUT S3 échoué (${put.status})`);
+  if (!put.ok) throw new Error(`S3 PUT failed (${put.status})`);
   return file.file_id as string;
 }
 
@@ -57,7 +57,7 @@ export interface TaskResult {
   [k: string]: unknown;
 }
 
-/** Lance une tâche et poll jusqu'à success/error (timeout paramétrable). */
+/** Starts a task and polls until success/error (configurable timeout). */
 export async function runTask(
   feature: string,
   body: Record<string, unknown>,
@@ -65,7 +65,7 @@ export async function runTask(
 ): Promise<TaskResult> {
   const start = await api("POST", `/task/${feature}`, body);
   const taskId = (start.data ?? start.result)?.task_id;
-  if (!taskId) throw new Error(`Pas de task_id pour ${feature}`);
+  if (!taskId) throw new Error(`No task_id for ${feature}`);
 
   const t0 = Date.now();
   for (;;) {
@@ -79,7 +79,7 @@ export async function runTask(
   }
 }
 
-/** Extrait toutes les URLs http(s) d'un résultat (images S3 signées). */
+/** Extracts all http(s) URLs from a result (signed S3 images). */
 export function findUrls(obj: unknown): string[] {
   const out: string[] = [];
   const walk = (o: unknown) => {
@@ -91,7 +91,7 @@ export function findUrls(obj: unknown): string[] {
   return out;
 }
 
-/** Solde d'unités du compte. */
+/** Account unit balance. */
 export async function getCredit(): Promise<number> {
   const res = await fetch("https://yce-api-01.makeupar.com/s2s/v1.0/client/credit", {
     headers: authHeaders(),

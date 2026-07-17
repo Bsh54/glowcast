@@ -1,21 +1,13 @@
-/** État partagé du parcours GlowCast (6 écrans), persisté en sessionStorage. */
-
-export type EventType =
-  | "mariage"
-  | "entretien"
-  | "soiree"
-  | "date"
-  | "shooting"
-  | "gala"
-  | "autre";
+/** Shared state for the 6-screen GlowCast journey, persisted in sessionStorage. */
 
 export interface EventInfo {
-  type: EventType;
-  label: string;
+  description: string; // free-text description of the event
   date: string; // ISO yyyy-mm-dd
   city: string;
   daysLeft: number;
   weather?: { tempC: number; condition: string; icon: string };
+  // Derived by the AI from the description (filled later)
+  parsed?: { kind: string; formality: string; vibe: string };
 }
 
 export interface SkinScores {
@@ -33,7 +25,7 @@ export interface ToneColors {
 }
 
 export interface Palette {
-  season: "Printemps" | "Été" | "Automne" | "Hiver";
+  season: "Spring" | "Summer" | "Autumn" | "Winter";
   colors: string[];
   avoid: string[];
   description: string;
@@ -41,15 +33,15 @@ export interface Palette {
 
 export interface FlowState {
   event?: EventInfo;
-  selfieDataUrl?: string; // base64 du selfie capturé
+  selfieDataUrl?: string; // captured selfie as base64
   scores?: SkinScores;
   skinAge?: number;
   globalScore?: number;
   tone?: ToneColors;
   palette?: Palette;
-  improvedUrl?: string; // projection peau
+  improvedUrl?: string; // skin projection image
   skincarePlan?: string[];
-  lookUrl?: string; // rendu VTO courant
+  lookUrl?: string; // current VTO render
   lookPieces?: { kind: string; label: string }[];
 }
 
@@ -73,16 +65,6 @@ export function saveFlow(patch: Partial<FlowState>): FlowState {
 export function resetFlow() {
   sessionStorage.removeItem(KEY);
 }
-
-export const EVENT_OPTIONS: { type: EventType; label: string; emojiFree: string }[] = [
-  { type: "mariage", label: "Mariage", emojiFree: "rings" },
-  { type: "entretien", label: "Entretien", emojiFree: "briefcase" },
-  { type: "soiree", label: "Soirée", emojiFree: "sparkles" },
-  { type: "date", label: "Date", emojiFree: "heart" },
-  { type: "shooting", label: "Shooting", emojiFree: "camera" },
-  { type: "gala", label: "Gala", emojiFree: "star" },
-  { type: "autre", label: "Autre", emojiFree: "dots" },
-];
 
 export function daysUntil(dateIso: string): number {
   const d = new Date(dateIso + "T12:00:00");

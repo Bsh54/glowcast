@@ -2,9 +2,9 @@
 
 /* ============================================================
    GlowCast — Design tokens (CHARTE_GRAPHIQUE.md)
-   Palette principale : Soft pink + lavender luxury
-   Variante sombre : Premium black + gold (écrans immersifs)
-   Style : Liquid Glass
+   Main palette: Soft pink + lavender luxury
+   Dark variant: Premium black + gold (immersive screens)
+   Style: Liquid Glass
    ============================================================ */
 
 :root {
@@ -22,7 +22,7 @@
   --destructive: #dc2626;
   --ring: #ec4899;
 
-  /* Variante sombre premium (écrans caméra & look) */
+  /* Premium dark variant (camera & look screens) */
   --dark-primary: #1c1917;
   --dark-secondary: #44403c;
   --dark-gold: #a16207;
@@ -34,7 +34,7 @@
   --morph-duration: 500ms;
   --blur-amount: 15px;
 
-  /* Jauges scores */
+  /* Score gauges */
   --score-low: #e74c3c;
   --score-mid: #f5c542;
   --score-high: #2ecc71;
@@ -94,7 +94,7 @@ h1, h2, h3 {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-/* Fond iridescent (accueil) */
+/* Iridescent background (landing) */
 .iridescent-bg {
   background:
     radial-gradient(60% 80% at 15% 20%, rgba(236, 72, 153, 0.16), transparent 60%),
@@ -103,7 +103,7 @@ h1, h2, h3 {
     var(--background);
 }
 
-/* ============ Interactions (charte §4) ============ */
+/* ============ Interactions (style guide §4) ============ */
 button, a, [role="button"] {
   cursor: pointer;
 }

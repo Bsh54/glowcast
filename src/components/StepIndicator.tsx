@@ -1,7 +1,7 @@
 "use client";
 
-/** Charte §4.3 : "Étape X sur 6" visible sur tout le flow. */
-const STEPS = ["Événement", "Selfie", "Diagnostic", "Projection", "Look", "Récap"];
+/** Style guide §4.3: "Step X of 6" visible across the whole flow. */
+const STEPS = ["Event", "Selfie", "Diagnosis", "Projection", "Look", "Summary"];
 
 export default function StepIndicator({
   current,
@@ -12,7 +12,7 @@ export default function StepIndicator({
 }) {
   return (
     <nav
-      aria-label={`Étape ${current} sur ${STEPS.length}`}
+      aria-label={`Step ${current} of ${STEPS.length}`}
       className="flex items-center justify-center gap-2 py-4"
     >
       {STEPS.map((label, i) => {
@@ -33,7 +33,7 @@ export default function StepIndicator({
               aria-hidden
             />
             <span className="sr-only">
-              {label} {active ? "(étape actuelle)" : done ? "(terminée)" : ""}
+              {label} {active ? "(current step)" : done ? "(done)" : ""}
             </span>
           </div>
         );
@@ -44,7 +44,7 @@ export default function StepIndicator({
           dark ? "text-dark-gold-light" : "text-muted-foreground",
         ].join(" ")}
       >
-        Étape {current} sur {STEPS.length}
+        Step {current} of {STEPS.length}
       </span>
     </nav>
   );

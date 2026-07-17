@@ -15,9 +15,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "GlowCast — Prêt·e pour ton grand jour",
+  title: "GlowCast — Ready for your big day",
   description:
-    "Diagnostic peau, palette de couleurs personnelle et look complet essayé sur toi — pour arriver à ton événement avec confiance.",
+    "Skin diagnosis, personal color palette, and a complete look tried on you — arrive at your event with confidence.",
 };
 
 export default function RootLayout({
@@ -26,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${inter.variable} ${playfair.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${playfair.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
