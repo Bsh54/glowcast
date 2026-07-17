@@ -3,6 +3,7 @@ import { uploadImage, runTask, findUrls } from "@/lib/youcam";
 import { deepseekJson } from "@/lib/deepseek";
 import { dataUrlToBuffer, urlToDataUrl } from "@/lib/image";
 import { cleanText } from "@/lib/guard";
+import { SKINCARE_KNOWLEDGE } from "@/lib/skincare-knowledge";
 
 export const maxDuration = 300;
 
@@ -67,15 +68,24 @@ The final week must be concrete and specific.`;
           `Keep identity, hair, framing and expression strictly identical.`,
       }),
       deepseekJson<PlanAI>(
-        `You are a pragmatic skincare coach. Reply with strict JSON only.
-Hard rules for every text field: plain warm English, max 90 characters,
-no brand names, no promises, no medical language.`,
-        `The user's weakest skin readings are: ${focus}.
+        `You are a skincare coach whose advice is strictly grounded in the
+dermatology reference below. Every instruction must be specific: name the
+ingredient AND its concentration when relevant (e.g. "niacinamide 5% serum",
+"salicylic acid 2% cleanser"), and respect the pre-event timeline rules to
+the letter. Reply with strict JSON only.
+Hard rules for every text field: plain warm English, max 110 characters,
+no brand names, no promises, no medical language.
+
+DERMATOLOGY REFERENCE (your only source of truth):
+${SKINCARE_KNOWLEDGE}`,
+        `The user's weakest skin readings (from an AI skin scan) are: ${focus}.
+Use the CONCERN-SPECIFIC PROTOCOLS for exactly these concerns — do not give
+generic advice when a protocol exists.
 ${planPrompt}
 ${SAFETY_RULES}
 
 Return JSON: {"entries": [{"label": "...", "am": "...", "pm": "...", "tip": "..."}]}`,
-        { maxTokens: 1400 }
+        { maxTokens: 1600 }
       ),
     ]);
 
@@ -83,9 +93,9 @@ Return JSON: {"entries": [{"label": "...", "am": "...", "pm": "...", "tip": "...
     const entries: PlanEntry[] = (planAI.entries ?? [])
       .map((e) => ({
         label: cleanText(e.label, 40, ""),
-        am: e.am ? cleanText(e.am, 110, "Gentle cleanser, moisturizer, SPF.") : undefined,
-        pm: e.pm ? cleanText(e.pm, 110, "Cleanse gently and moisturize.") : undefined,
-        tip: e.tip ? cleanText(e.tip, 110, "") || undefined : undefined,
+        am: e.am ? cleanText(e.am, 130, "Gentle cleanser, moisturizer, SPF 30.") : undefined,
+        pm: e.pm ? cleanText(e.pm, 130, "Cleanse gently and moisturize.") : undefined,
+        tip: e.tip ? cleanText(e.tip, 130, "") || undefined : undefined,
       }))
       .filter((e) => e.label && (e.am || e.pm))
       .slice(0, daily ? 14 : 7);

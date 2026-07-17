@@ -7,6 +7,7 @@ import { ArrowRight, Shirt, Wand2, AlertCircle } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
 import BackButton from "@/components/BackButton";
 import PhotoPicker from "@/components/PhotoPicker";
+import LookCard from "@/components/LookCard";
 import { loadFlow, saveFlow, type FlowState, type LookImage } from "@/lib/flow";
 
 /** Screen 5 — four looks rendered on the user, shown together.
@@ -193,28 +194,14 @@ export default function Look() {
             {/* The four looks — nothing to pick, just look */}
             <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-4 w-full max-w-2xl">
               {flow.looks.map((look, i) => (
-                <motion.figure
+                <motion.div
                   key={look.url.slice(-24)}
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: i * 0.1 }}
-                  className="relative rounded-3xl overflow-hidden glass"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={look.url}
-                    alt={`${look.label} tried on you`}
-                    className="w-full h-auto"
-                  />
-                  <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-2.5 pt-8 text-white">
-                    <span className="block text-sm font-semibold">{look.label}</span>
-                    {look.style && (
-                      <span className="text-[11px] uppercase tracking-widest text-white/80">
-                        {look.style}
-                      </span>
-                    )}
-                  </figcaption>
-                </motion.figure>
+                  <LookCard url={look.url} label={look.label} style={look.style} />
+                </motion.div>
               ))}
             </div>
 
