@@ -6,13 +6,16 @@ import templates from "@/data/cloth-templates.json";
 
 export const maxDuration = 300;
 
-/** Screen 5 backend — generative styling pipeline:
- *  1. DeepSeek decides WHICH pieces the event calls for (nothing is forced —
- *     a beach day gets swimwear and sandals, an interview just the outfit)
- *     and describes each piece.
- *  2. Each piece is rendered as a product shot (text-to-image).
- *  3. Pieces are applied on the user in sequence (each VTO starts from the
- *     previous render). Falls back to the template catalog if needed. */
+/** Screen 5 backend — hybrid styling pipeline.
+ *
+ *  Main outfit: the stylist first shops the official 250-template catalog
+ *  (template thumbnail == what gets rendered, so what we show matches what
+ *  the user wears). Only when nothing in the catalog fits the event does it
+ *  design a custom garment (text-to-image → ref VTO), accepting some visual
+ *  drift as the trade-off for an infinite wardrobe.
+ *
+ *  Accessories (hat/bag/scarf): generated and applied in sequence, only when
+ *  the event genuinely calls for them. */
 
 interface LookBody {
   selfie: string;
@@ -27,16 +30,23 @@ interface LookBody {
   excludeIds?: string[];
 }
 
-type PieceType = "cloth" | "shoes" | "hat" | "bag" | "scarf";
+type AccessoryType = "hat" | "bag" | "scarf";
 
 interface Plan {
   gender: "female" | "male";
   reason: string;
-  pieces: { type: PieceType; label: string; prompt: string }[];
+  outfit:
+    | { mode: "template"; template_id: string; label: string }
+    | { mode: "custom"; label: string; prompt: string };
+  accessories: { type: AccessoryType; label: string; prompt: string }[];
 }
 
-/** Shoes need the feet, hats crop to a portrait — apply in this order. */
-const APPLY_ORDER: PieceType[] = ["shoes", "cloth", "bag", "scarf", "hat"];
+interface PieceOut {
+  type: string;
+  label: string;
+  image: string | null;
+  applied: boolean;
+}
 
 function eventContext(event: LookBody["event"], palette: LookBody["palette"], adjustment?: string) {
   return `Event: "${event?.description ?? "elegant occasion"}" (in ${event?.daysLeft ?? "?"} days, city: ${event?.city ?? "?"}).
@@ -59,57 +69,107 @@ export async function POST(req: NextRequest) {
       (await req.json()) as LookBody;
     const { buf, contentType } = dataUrlToBuffer(selfie);
 
-    // 1. The stylist decides which pieces the event actually needs
+    const catalogEntries = (templates as { id: string; title: string; category: string; thumb: string }[])
+      .filter((t) => !excludeIds.includes(t.id));
+    const catalog = catalogEntries.map((t) => `${t.id} | ${t.title} | ${t.category}`).join("\n");
+
+    // 1. The stylist plans the look
     const plan = await deepseekJson<Plan>(
       "You are a personal stylist. Reply with strict JSON only.",
-      `Decide what this user should wear, piece by piece.
+      `Plan what this user should wear.
 ${eventContext(event, palette, adjustment)}
 
+OUTFIT CATALOG (id | title | category):
+${catalog}
+
 Rules:
-- Only include pieces that genuinely fit the event. Never pad the list: an
-  office interview usually needs only the outfit; a beach day calls for light
-  clothing and maybe a hat; a gala may deserve a bag. 1 to 3 pieces maximum.
-- "cloth" (the main outfit) is always required and listed once.
-- Allowed piece types: "cloth", "shoes", "hat", "bag", "scarf".
-- Colors must come from the flattering palette.
+- STRONGLY prefer an outfit from the catalog (mode "template"): pick the one
+  that best fits the event, weather and the user's flattering colors.
+- Use mode "custom" ONLY if truly nothing in the catalog suits the event
+  (e.g. a very specific cultural or themed dress code).
+- Accessories: only include one if the event genuinely calls for it (a beach
+  day may need a hat; a gala may deserve a bag). 0 to 2 accessories, types
+  allowed: "hat", "bag", "scarf". Most events need none.
 
 Return JSON:
 {
  "gender": "female|male (best guess from the event description, default female)",
  "reason": "1 sentence, addressed to the user, why this look fits their event, colors and weather",
- "pieces": [
-   {"type": "cloth", "label": "short name (e.g. 'Terracotta silk midi dress')", "prompt": "detailed visual description for an image generator: exact colors, fabric, cut — no person, no background"},
-   ...
- ]
+ "outfit": {"mode": "template", "template_id": "exact id from catalog", "label": "short human name"}
+        OR {"mode": "custom", "label": "short human name", "prompt": "detailed visual description for an image generator: exact colors, fabric, cut — no person, no background"},
+ "accessories": [ {"type": "hat", "label": "short name", "prompt": "visual description — no person"} ]
 }`,
       { maxTokens: 700 }
     );
 
-    const pieces = (plan.pieces ?? [])
-      .filter((p) => APPLY_ORDER.includes(p.type))
-      .sort((a, b) => APPLY_ORDER.indexOf(a.type) - APPLY_ORDER.indexOf(b.type))
-      .slice(0, 3);
-    if (!pieces.some((p) => p.type === "cloth")) {
-      pieces.unshift({
-        type: "cloth",
-        label: "Outfit",
-        prompt: "elegant outfit in the user's flattering colors",
+    const pieces: PieceOut[] = [];
+
+    // 2. Apply the main outfit
+    let current: { buf: ArrayBuffer; contentType: string } | null = null;
+
+    if (plan.outfit.mode === "template") {
+      const entry = catalogEntries.find((t) => t.id === (plan.outfit as { template_id: string }).template_id);
+      if (!entry) {
+        return NextResponse.json({ error: "stylist_failed", detail: "invalid template id" }, { status: 500 });
+      }
+      const fid = await uploadImage("cloth", buf, contentType);
+      const vto = await runTask("cloth", { src_file_id: fid, template_id: entry.id });
+      if (vto.task_status !== "success") {
+        return NextResponse.json({ error: "vto_failed", detail: vto.error }, { status: 422 });
+      }
+      const url = findUrls(vto).find((u) => u.includes("amazonaws") || u.includes("s3"));
+      if (!url) {
+        return NextResponse.json({ error: "vto_failed", detail: "no result image" }, { status: 500 });
+      }
+      const renderRes = await fetch(url);
+      current = { buf: await renderRes.arrayBuffer(), contentType: "image/jpeg" };
+      // The catalog thumbnail IS the garment the engine renders — coherent.
+      pieces.push({ type: "cloth", label: plan.outfit.label, image: entry.thumb, applied: true });
+    } else {
+      // Custom design — rare path, catalog didn't fit the event
+      const gen = await runTask("text-to-image/youcam", {
+        prompt:
+          `Professional e-commerce product photo, plain white background, no person, no face, no mannequin head. ` +
+          plan.outfit.prompt,
+        model: "youcam-image-v2",
       });
+      const genUrl = findUrls(gen).find((u) => u.includes("amazonaws") || u.includes("s3"));
+      if (gen.task_status !== "success" || !genUrl) {
+        return NextResponse.json({ error: "generation_failed", detail: gen.error }, { status: 500 });
+      }
+      const productRes = await fetch(genUrl);
+      const productBuf = await productRes.arrayBuffer();
+      const productImage = `data:image/jpeg;base64,${Buffer.from(productBuf).toString("base64")}`;
+      const [srcFid, refFid] = await Promise.all([
+        uploadImage("cloth", buf, contentType),
+        uploadImage("cloth", productBuf, "image/jpeg", "garment.jpg"),
+      ]);
+      const vto = await runTask("cloth", {
+        src_file_id: srcFid,
+        ref_file_id: refFid,
+        garment_category: "auto",
+      });
+      if (vto.task_status !== "success") {
+        return NextResponse.json({ error: "vto_failed", detail: vto.error }, { status: 422 });
+      }
+      const url = findUrls(vto).find((u) => u.includes("amazonaws") || u.includes("s3"));
+      if (!url) {
+        return NextResponse.json({ error: "vto_failed", detail: "no result image" }, { status: 500 });
+      }
+      const renderRes = await fetch(url);
+      current = { buf: await renderRes.arrayBuffer(), contentType: "image/jpeg" };
+      pieces.push({ type: "cloth", label: plan.outfit.label, image: productImage, applied: true });
     }
 
-    // 2 & 3. Generate each piece, then apply it on the current render
-    let current = { buf, contentType };
-    let anyApplied = false;
-    const applied: { type: PieceType; label: string; image: string | null; applied: boolean }[] = [];
-
-    for (const piece of pieces) {
-      let productImage: string | null = null;
+    // 3. Accessories in sequence (best effort — a failure never breaks the look)
+    for (const acc of (plan.accessories ?? []).slice(0, 2)) {
       let ok = false;
+      let productImage: string | null = null;
       try {
         const gen = await runTask("text-to-image/youcam", {
           prompt:
-            `Professional e-commerce product photo, plain white background, no person, no face, no mannequin head. ` +
-            piece.prompt,
+            `Professional e-commerce product photo of a single ${acc.type}, plain white background, no person, no face. ` +
+            acc.prompt,
           model: "youcam-image-v2",
         });
         const genUrl = findUrls(gen).find((u) => u.includes("amazonaws") || u.includes("s3"));
@@ -117,88 +177,42 @@ Return JSON:
           const productRes = await fetch(genUrl);
           const productBuf = await productRes.arrayBuffer();
           productImage = `data:image/jpeg;base64,${Buffer.from(productBuf).toString("base64")}`;
-
-          const feature = piece.type === "cloth" ? "cloth" : piece.type;
           const [srcFid, refFid] = await Promise.all([
-            uploadImage(feature, current.buf, current.contentType),
-            uploadImage(feature, productBuf, "image/jpeg", "piece.jpg"),
+            uploadImage(acc.type, current.buf, current.contentType),
+            uploadImage(acc.type, productBuf, "image/jpeg", "acc.jpg"),
           ]);
-          const body: Record<string, unknown> =
-            piece.type === "cloth"
-              ? { src_file_id: srcFid, ref_file_id: refFid, garment_category: "auto" }
-              : { src_file_id: srcFid, ref_file_id: refFid, gender: plan.gender ?? "female" };
-          const vto = await runTask(feature, body);
-
-          if (
-            piece.type === "cloth" &&
-            vto.task_status === "error" &&
-            String(vto.error).match(/pose|body|face/)
-          ) {
-            return NextResponse.json({ error: "vto_failed", detail: vto.error }, { status: 422 });
-          }
+          const vto = await runTask(acc.type, {
+            src_file_id: srcFid,
+            ref_file_id: refFid,
+            gender: plan.gender ?? "female",
+          });
           const url = findUrls(vto).find((u) => u.includes("amazonaws") || u.includes("s3"));
           if (vto.task_status === "success" && url) {
             const renderRes = await fetch(url);
-            const renderBuf = await renderRes.arrayBuffer();
-            current = { buf: renderBuf, contentType: "image/jpeg" };
+            current = { buf: await renderRes.arrayBuffer(), contentType: "image/jpeg" };
             ok = true;
-            anyApplied = true;
           }
         }
       } catch {
-        // skip this piece, keep the previous render
+        // keep previous render
       }
-      applied.push({ type: piece.type, label: piece.label, image: productImage, applied: ok });
+      pieces.push({ type: acc.type, label: acc.label, image: productImage, applied: ok });
     }
 
-    if (anyApplied) {
-      const look = `data:${current.contentType};base64,${Buffer.from(current.buf).toString("base64")}`;
-      return NextResponse.json({
-        look,
-        pieces: applied,
-        templateId: `custom-${Date.now()}`,
-        pieceLabel: applied
-          .filter((p) => p.applied)
-          .map((p) => p.label)
-          .join(" · "),
-        reason: plan.reason,
-        generated: true,
-      });
-    }
-
-    // Fallback: official template catalog
-    const catalog = (templates as { id: string; title: string; category: string }[])
-      .filter((t) => !excludeIds.includes(t.id))
-      .map((t) => `${t.id} | ${t.title} | ${t.category}`)
-      .join("\n");
-    const pick = await deepseekJson<{ template_id: string; reason: string; piece_label: string }>(
-      "You are a personal stylist. Reply with strict JSON only.",
-      `Choose ONE outfit template for this user.
-${eventContext(event, palette, adjustment)}
-
-Catalog (id | title | category):
-${catalog}
-
-Return JSON: {"template_id": "exact id from catalog", "reason": "1 sentence, addressed to the user", "piece_label": "short human name of the outfit"}`,
-      { maxTokens: 400 }
-    );
-    const valid = (templates as { id: string }[]).some((t) => t.id === pick.template_id);
-    if (!valid) {
-      return NextResponse.json({ error: "stylist_failed", detail: "invalid template id" }, { status: 500 });
-    }
-    const fid = await uploadImage("cloth", buf, contentType);
-    const vto = await runTask("cloth", { src_file_id: fid, template_id: pick.template_id });
-    if (vto.task_status !== "success") {
-      return NextResponse.json({ error: "vto_failed", detail: vto.error }, { status: 422 });
-    }
-    const url = findUrls(vto).find((u) => u.includes("amazonaws") || u.includes("s3"));
+    const look = `data:${current.contentType};base64,${Buffer.from(current.buf).toString("base64")}`;
     return NextResponse.json({
-      look: url ? await urlToDataUrl(url) : null,
-      pieces: [{ type: "cloth", label: pick.piece_label, image: null, applied: true }],
-      templateId: pick.template_id,
-      pieceLabel: pick.piece_label,
-      reason: pick.reason,
-      generated: false,
+      look,
+      pieces,
+      templateId:
+        plan.outfit.mode === "template"
+          ? (plan.outfit as { template_id: string }).template_id
+          : `custom-${Date.now()}`,
+      pieceLabel: pieces
+        .filter((p) => p.applied)
+        .map((p) => p.label)
+        .join(" · "),
+      reason: plan.reason,
+      generated: plan.outfit.mode === "custom",
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown_error";
