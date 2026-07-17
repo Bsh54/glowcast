@@ -1,0 +1,166 @@
+import { jsPDF } from "jspdf";
+import type { FlowState } from "@/lib/flow";
+
+/** Builds the GlowCast event-plan PDF entirely client-side and triggers the
+ *  download. Style guide colors: pink/lavender on off-white. */
+export async function downloadPlanPdf(flow: FlowState) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210;
+  const M = 16;
+  let y = 18;
+
+  const pink: [number, number, number] = [236, 72, 153];
+  const violet: [number, number, number] = [139, 92, 246];
+  const ink: [number, number, number] = [131, 24, 67];
+  const grey: [number, number, number] = [100, 116, 139];
+
+  const ensureRoom = (needed: number) => {
+    if (y + needed > 283) {
+      doc.addPage();
+      y = 18;
+    }
+  };
+
+  // Header
+  doc.setTextColor(...violet);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("GLOWCAST  ·  YOUR EVENT PLAN", W / 2, y, { align: "center" });
+  y += 8;
+
+  doc.setTextColor(...ink);
+  doc.setFontSize(15);
+  const title = flow.event?.description ?? "Your event";
+  const titleLines = doc.splitTextToSize(title, W - 2 * M);
+  doc.text(titleLines.slice(0, 3), W / 2, y, { align: "center" });
+  y += titleLines.slice(0, 3).length * 6.5 + 2;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...grey);
+  const dateLabel = flow.event
+    ? new Date(flow.event.date + "T12:00:00").toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "";
+  let meta = `${dateLabel}  ·  ${flow.event?.city ?? ""}`;
+  if (flow.event?.weather) {
+    meta += `  ·  ${flow.event.weather.condition}, ${flow.event.weather.tempMinC}-${flow.event.weather.tempMaxC}°C`;
+  }
+  doc.text(meta, W / 2, y, { align: "center" });
+  y += 4;
+  doc.setDrawColor(...pink);
+  doc.setLineWidth(0.4);
+  doc.line(M, y + 2, W - M, y + 2);
+  y += 9;
+
+  // Skin score
+  if (flow.globalScore != null) {
+    doc.setTextColor(...ink);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Skin score today: ${flow.globalScore}/100`, M, y);
+    y += 8;
+  }
+
+  // Color palette
+  if (flow.palette) {
+    ensureRoom(30);
+    doc.setTextColor(...ink);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Your colors — ${flow.palette.season}`, M, y);
+    y += 6;
+    const sw = 14;
+    flow.palette.colors.slice(0, 8).forEach((hex, i) => {
+      const x = M + i * (sw + 3.5);
+      doc.setFillColor(hex);
+      doc.roundedRect(x, y, sw, sw, 2, 2, "F");
+      doc.setFontSize(6.5);
+      doc.setTextColor(...grey);
+      doc.setFont("courier", "normal");
+      doc.text(hex.toUpperCase(), x + sw / 2, y + sw + 3.5, { align: "center" });
+    });
+    y += sw + 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...grey);
+    const desc = doc.splitTextToSize(flow.palette.description ?? "", W - 2 * M);
+    doc.text(desc.slice(0, 3), M, y);
+    y += desc.slice(0, 3).length * 4.2 + 6;
+  }
+
+  // The four looks
+  if (flow.looks && flow.looks.length > 0) {
+    ensureRoom(80);
+    doc.setTextColor(...ink);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Your looks", M, y);
+    y += 6;
+    const imgW = (W - 2 * M - 3 * 4) / 4;
+    const imgH = imgW * (4 / 3);
+    for (let i = 0; i < Math.min(4, flow.looks.length); i++) {
+      const x = M + i * (imgW + 4);
+      try {
+        doc.addImage(flow.looks[i].url, "JPEG", x, y, imgW, imgH, undefined, "MEDIUM");
+      } catch {
+        // skip unloadable image
+      }
+      doc.setFontSize(7.5);
+      doc.setTextColor(...ink);
+      doc.setFont("helvetica", "bold");
+      const label = doc.splitTextToSize(flow.looks[i].label, imgW);
+      doc.text(label.slice(0, 2), x, y + imgH + 4);
+    }
+    y += imgH + 14;
+  }
+
+  // Skincare plan timeline
+  if (flow.skincarePlan && flow.skincarePlan.length > 0) {
+    ensureRoom(20);
+    doc.setTextColor(...ink);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Skincare plan until the big day", M, y);
+    y += 7;
+    for (const e of flow.skincarePlan) {
+      const lines: string[] = [];
+      if (e.am) lines.push(`AM — ${e.am}`);
+      if (e.pm) lines.push(`PM — ${e.pm}`);
+      if (e.tip) lines.push(`Tip: ${e.tip}`);
+      ensureRoom(6 + lines.length * 4.5);
+      doc.setFillColor(...pink);
+      doc.circle(M + 1.2, y - 1.2, 1.2, "F");
+      doc.setFontSize(10);
+      doc.setTextColor(...ink);
+      doc.setFont("helvetica", "bold");
+      doc.text(e.label, M + 5, y);
+      y += 4.8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...grey);
+      for (const line of lines) {
+        const wrapped = doc.splitTextToSize(line, W - 2 * M - 5);
+        doc.text(wrapped, M + 5, y);
+        y += wrapped.length * 4.2;
+      }
+      y += 2.5;
+    }
+  }
+
+  // Footer
+  doc.setFontSize(7.5);
+  doc.setTextColor(...grey);
+  doc.text(
+    "Generated by GlowCast — skin analysis & virtual try-on powered by YouCam AI",
+    W / 2,
+    290,
+    { align: "center" }
+  );
+
+  doc.save("glowcast-event-plan.pdf");
+}

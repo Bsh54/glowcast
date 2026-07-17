@@ -3,15 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CalendarDays, MapPin, Printer, RotateCcw, Sparkles, Shirt } from "lucide-react";
+import { CalendarDays, MapPin, Download, RotateCcw, Sparkles } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
 import BackButton from "@/components/BackButton";
+import PlanTimeline from "@/components/PlanTimeline";
 import { loadFlow, resetFlow, type FlowState } from "@/lib/flow";
+import { downloadPlanPdf } from "@/lib/pdf";
 
-/** Screen 6 — editorial summary card the user can keep (print/screenshot). */
+/** Screen 6 — editorial summary: the four looks, the palette, the plan —
+ *  everything, with a direct PDF download. */
 export default function Summary() {
   const router = useRouter();
   const [flow, setFlow] = useState<FlowState | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const f = loadFlow();
@@ -32,9 +36,19 @@ export default function Summary() {
       })
     : "";
 
+  async function onDownload() {
+    if (!flow || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadPlanPdf(flow);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <main className="iridescent-bg flex-1 flex flex-col">
-      <div className="print:hidden relative">
+      <div className="relative">
         <BackButton href="/look" />
         <StepIndicator current={6} />
       </div>
@@ -44,7 +58,7 @@ export default function Summary() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="glass rounded-3xl p-6 sm:p-10 print:shadow-none"
+          className="glass rounded-3xl p-6 sm:p-10"
         >
           {/* Header */}
           <header className="text-center border-b border-border pb-6">
@@ -76,103 +90,95 @@ export default function Summary() {
             )}
           </header>
 
-          {/* Look + palette */}
-          <div className="mt-8 grid sm:grid-cols-2 gap-6 items-start">
-            <div>
-              {flow.lookUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={flow.lookUrl}
-                  alt="Your final look"
-                  className="rounded-2xl w-full shadow-md"
-                />
-              ) : (
-                flow.selfieDataUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={flow.selfieDataUrl}
-                    alt="Your selfie"
-                    className="rounded-2xl w-full shadow-md"
-                  />
-                )
+          {/* The four looks */}
+          {flow.looks && flow.looks.length > 0 && (
+            <section className="mt-8">
+              <h2 className="text-lg">Your looks</h2>
+              {flow.lookReason && (
+                <p className="mt-1 text-sm text-muted-foreground">{flow.lookReason}</p>
               )}
-              {flow.lookPieces?.[0] && (
-                <p className="mt-3 flex items-center gap-2 text-sm">
-                  <Shirt className="w-4 h-4 text-accent" aria-hidden />
-                  <span className="font-medium">{flow.lookPieces[0].label}</span>
-                </p>
-              )}
-            </div>
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {flow.looks.map((look) => (
+                  <figure key={look.url.slice(-24)} className="relative rounded-2xl overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={look.url}
+                      alt={`${look.label} tried on you`}
+                      className="w-full aspect-[3/4] object-cover"
+                    />
+                    <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/65 to-transparent px-2 pb-1.5 pt-6 text-white">
+                      <span className="block text-xs font-semibold leading-tight">
+                        {look.label}
+                      </span>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </section>
+          )}
 
-            <div className="space-y-6">
-              {flow.palette && (
-                <section>
-                  <h2 className="text-lg">
-                    Your colors —{" "}
-                    <span className="text-accent uppercase tracking-widest text-sm">
-                      {flow.palette.season}
-                    </span>
-                  </h2>
-                  <div className="mt-3 grid grid-cols-4 gap-2">
-                    {flow.palette.colors.map((hex) => (
-                      <div key={hex} className="flex flex-col items-center gap-1">
-                        <div
-                          className="w-full aspect-square rounded-xl border border-border"
-                          style={{ backgroundColor: hex }}
-                          role="img"
-                          aria-label={`Color ${hex}`}
-                        />
-                        <span className="text-[9px] font-mono text-muted-foreground">{hex}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Show these swatches in-store or search them online.
-                  </p>
-                </section>
-              )}
-
-              {flow.globalScore != null && (
-                <section className="rounded-2xl bg-muted/60 px-4 py-3 text-sm">
-                  Skin score today:{" "}
-                  <span className="font-semibold text-primary tabular-nums">
-                    {flow.globalScore}/100
+          {/* Palette + score */}
+          <div className="mt-8 grid sm:grid-cols-[1fr_auto] gap-6 items-start">
+            {flow.palette && (
+              <section>
+                <h2 className="text-lg">
+                  Your colors —{" "}
+                  <span className="text-accent uppercase tracking-widest text-sm">
+                    {flow.palette.season}
                   </span>
-                </section>
-              )}
-            </div>
+                </h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {flow.palette.colors.map((hex) => (
+                    <div key={hex} className="flex flex-col items-center gap-1">
+                      <div
+                        className="w-11 h-11 rounded-xl border border-border"
+                        style={{ backgroundColor: hex }}
+                        role="img"
+                        aria-label={`Color ${hex}`}
+                      />
+                      <span className="text-[9px] font-mono text-muted-foreground">{hex}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Show these swatches in-store or search them online.
+                </p>
+              </section>
+            )}
+
+            {flow.globalScore != null && (
+              <section className="rounded-2xl bg-muted/60 px-5 py-4 text-sm text-center">
+                <p className="text-muted-foreground">Skin score today</p>
+                <p className="text-3xl font-semibold text-primary tabular-nums">
+                  {flow.globalScore}
+                  <span className="text-base text-muted-foreground">/100</span>
+                </p>
+              </section>
+            )}
           </div>
 
-          {/* Skincare plan */}
+          {/* Skincare plan timeline */}
           {flow.skincarePlan && flow.skincarePlan.length > 0 && (
             <section className="mt-8">
               <h2 className="flex items-center gap-2 text-lg">
                 <Sparkles className="w-4 h-4 text-accent" aria-hidden />
                 Skincare plan until the big day
               </h2>
-              <ol className="mt-3 space-y-2">
-                {flow.skincarePlan.map((step, i) => (
-                  <li key={i} className="flex gap-3 text-sm">
-                    <span className="shrink-0 w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[11px] font-semibold">
-                      {i + 1}
-                    </span>
-                    {step}
-                  </li>
-                ))}
-              </ol>
+              <PlanTimeline entries={flow.skincarePlan} />
             </section>
           )}
         </motion.div>
 
         {/* Actions */}
-        <div className="mt-8 flex flex-wrap justify-center gap-3 print:hidden">
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button
             type="button"
-            onClick={() => window.print()}
-            className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-on-primary shadow-lg shadow-accent/25"
+            onClick={onDownload}
+            disabled={downloading}
+            className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-on-primary shadow-lg shadow-accent/25 disabled:opacity-60"
           >
-            <Printer className="w-4 h-4" aria-hidden />
-            Save as PDF
+            <Download className="w-4 h-4" aria-hidden />
+            {downloading ? "Preparing your PDF…" : "Download my plan (PDF)"}
           </button>
           <button
             type="button"

@@ -7,23 +7,21 @@ import { ArrowRight, Shirt, Wand2, AlertCircle } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
 import BackButton from "@/components/BackButton";
 import PhotoPicker from "@/components/PhotoPicker";
-import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
+import { loadFlow, saveFlow, type FlowState, type LookImage } from "@/lib/flow";
 
-/** Screen 5 — the outfit tried on the user (same light theme as the site).
- *  The Clothes VTO needs the upper body visible: if the selfie is too tight
- *  (error_pose), we ask for a dedicated upper-body photo. */
+/** Screen 5 — four looks rendered on the user, shown together.
+ *  Nothing to pick: the four directions ARE the result. */
 export default function Look() {
   const router = useRouter();
   const [flow, setFlow] = useState<FlowState>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsBodyPhoto, setNeedsBodyPhoto] = useState(false);
-  const [reason, setReason] = useState<string>("");
-  const [tried, setTried] = useState<string[]>([]);
   const [needsPhotoIntro, setNeedsPhotoIntro] = useState(false);
+  const [tried, setTried] = useState<string[]>([]);
   const ran = useRef(false);
 
-  async function requestLook(adjustment?: string, photoOverride?: string) {
+  async function requestLooks(adjustment?: string, photoOverride?: string) {
     const f = loadFlow();
     const photo = photoOverride ?? f.lookPhotoDataUrl ?? f.selfieDataUrl;
     setLoading(true);
@@ -48,16 +46,15 @@ export default function Look() {
           setNeedsBodyPhoto(true);
           throw new Error(
             "The try-on needs your upper body in the photo (shoulders to waist). " +
-              "Upload a photo taken from a bit further away."
+              "Take or upload a photo from a bit further away."
           );
         }
         throw new Error(`Try-on failed (${detail || data.error}). Please try again.`);
       }
-      setTried((p) => [...p, data.templateId]);
-      setReason(data.reason);
+      setTried((p) => [...p, ...(data.triedIds ?? [])]);
       const next = saveFlow({
-        lookUrl: data.look,
-        lookPieces: [{ kind: "outfit", label: data.pieceLabel }],
+        looks: data.looks as LookImage[],
+        lookReason: data.reason,
       });
       setFlow(next);
     } catch (e) {
@@ -74,14 +71,14 @@ export default function Look() {
       return;
     }
     setFlow(f);
-    if (f.lookUrl) {
+    if (f.looks && f.looks.length > 0) {
       setLoading(false);
       return;
     }
     if (ran.current) return;
     ran.current = true;
     if (f.lookPhotoDataUrl) {
-      requestLook();
+      requestLooks();
     } else {
       // The try-on needs the upper body visible — ask for a dedicated
       // photo upfront instead of failing later.
@@ -98,10 +95,10 @@ export default function Look() {
       <BackButton />
       <StepIndicator current={5} />
 
-      <div className="flex-1 w-full max-w-3xl mx-auto px-4 pb-16">
-        <h1 className="text-3xl sm:text-4xl text-center mt-2">Your look, on you</h1>
+      <div className="flex-1 w-full max-w-4xl mx-auto px-4 pb-16">
+        <h1 className="text-3xl sm:text-4xl text-center mt-2">Your looks, on you</h1>
 
-        {needsPhotoIntro && !loading && !error && !flow.lookUrl && (
+        {needsPhotoIntro && !loading && !error && !flow.looks && (
           <div className="mt-8 mx-auto max-w-md glass rounded-3xl p-6 text-center">
             <h2 className="text-lg">One photo for the fitting</h2>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -115,7 +112,7 @@ export default function Look() {
                 onConfirm={(dataUrl) => {
                   saveFlow({ lookPhotoDataUrl: dataUrl });
                   setNeedsPhotoIntro(false);
-                  requestLook(undefined, dataUrl);
+                  requestLooks(undefined, dataUrl);
                 }}
               />
             </div>
@@ -124,22 +121,20 @@ export default function Look() {
 
         {loading && (
           <div className="mt-10 flex flex-col items-center gap-4" aria-live="polite">
-            <div className="relative w-full max-w-[280px] aspect-[3/4] rounded-3xl overflow-hidden glass">
-              {flow.selfieDataUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={flow.selfieDataUrl}
-                  alt=""
-                  className="w-full h-full object-cover opacity-30"
-                />
-              )}
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                <Shirt className="w-10 h-10 text-primary animate-pulse" aria-hidden />
-                <p className="text-sm text-muted-foreground">
-                  Your stylist is dressing you… up to a minute.
-                </p>
-              </div>
+            <div className="grid grid-cols-2 gap-4 w-full max-w-lg">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="relative aspect-[3/4] rounded-3xl overflow-hidden glass">
+                  <div className="skeleton absolute inset-0" />
+                  <Shirt
+                    className="absolute inset-0 m-auto w-8 h-8 text-primary/60 animate-pulse"
+                    aria-hidden
+                  />
+                </div>
+              ))}
             </div>
+            <p className="text-sm text-muted-foreground">
+              Your stylist is preparing four directions… about a minute.
+            </p>
           </div>
         )}
 
@@ -152,10 +147,10 @@ export default function Look() {
               <div className="mt-5">
                 <PhotoPicker
                   guide="wide"
-                  confirmLabel="Use for the try-on"
+                  confirmLabel="Use for the fitting"
                   onConfirm={(dataUrl) => {
                     saveFlow({ lookPhotoDataUrl: dataUrl });
-                    requestLook(undefined, dataUrl);
+                    requestLooks(undefined, dataUrl);
                   }}
                 />
               </div>
@@ -165,7 +160,7 @@ export default function Look() {
               {!needsBodyPhoto && (
                 <button
                   type="button"
-                  onClick={() => requestLook()}
+                  onClick={() => requestLooks()}
                   className="focus-ring tap-target rounded-2xl border border-border bg-card px-5 py-2.5 text-sm font-medium hover:border-primary/50"
                 >
                   Try again
@@ -182,43 +177,54 @@ export default function Look() {
           </div>
         )}
 
-        {!loading && !error && flow.lookUrl && (
+        {!loading && !error && flow.looks && flow.looks.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
             className="mt-8 flex flex-col items-center"
           >
-            <figure className="relative w-full max-w-md rounded-3xl overflow-hidden glass">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={flow.lookUrl}
-                alt="Your complete look tried on you"
-                className="w-full object-cover"
-              />
-              <figcaption className="absolute top-3 left-3 rounded-full bg-primary/80 px-3 py-1 text-xs text-white">
-                On you
-              </figcaption>
-            </figure>
-
-            {flow.lookPieces && flow.lookPieces.length > 0 && (
-              <p className="mt-4 text-center">
-                <span className="text-primary font-semibold">{flow.lookPieces[0].label}</span>
-                {reason && (
-                  <span className="block mt-1 text-sm text-muted-foreground max-w-sm">
-                    {reason}
-                  </span>
-                )}
+            {flow.lookReason && (
+              <p className="mb-5 text-sm text-muted-foreground text-center max-w-lg">
+                {flow.lookReason}
               </p>
             )}
 
-            {/* Quick adjustments */}
+            {/* The four looks — nothing to pick, just look */}
+            <div className="grid grid-cols-2 gap-4 w-full max-w-2xl">
+              {flow.looks.map((look, i) => (
+                <motion.figure
+                  key={look.url.slice(-24)}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                  className="relative rounded-3xl overflow-hidden glass"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={look.url}
+                    alt={`${look.label} tried on you`}
+                    className="w-full aspect-[3/4] object-cover"
+                  />
+                  <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-2.5 pt-8 text-white">
+                    <span className="block text-sm font-semibold">{look.label}</span>
+                    {look.style && (
+                      <span className="text-[11px] uppercase tracking-widest text-white/80">
+                        {look.style}
+                      </span>
+                    )}
+                  </figcaption>
+                </motion.figure>
+              ))}
+            </div>
+
+            {/* Regenerate four new directions */}
             <div className="mt-6 flex flex-wrap justify-center gap-2.5">
               {ADJUSTMENTS.map((a) => (
                 <button
                   key={a}
                   type="button"
-                  onClick={() => requestLook(a.toLowerCase())}
+                  onClick={() => requestLooks(a.toLowerCase())}
                   className="focus-ring tap-target flex items-center gap-1.5 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm transition-colors duration-200 hover:border-primary/50 hover:text-primary"
                 >
                   <Wand2 className="w-3.5 h-3.5" aria-hidden />
@@ -227,13 +233,12 @@ export default function Look() {
               ))}
             </div>
 
-
             <button
               type="button"
               onClick={() => router.push("/summary")}
               className="focus-ring tap-target mt-8 flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-accent px-8 py-3.5 text-base font-semibold text-on-primary shadow-xl shadow-accent/25 transition-transform duration-300 hover:scale-[1.02]"
             >
-              I love it — my summary
+              My summary
               <ArrowRight className="w-5 h-5" aria-hidden />
             </button>
           </motion.div>

@@ -35,6 +35,19 @@ export interface Palette {
   description: string;
 }
 
+export interface LookImage {
+  url: string;
+  label: string;
+  style?: string;
+}
+
+export interface PlanEntry {
+  label: string;
+  am?: string;
+  pm?: string;
+  tip?: string;
+}
+
 export interface FlowState {
   event?: EventInfo;
   selfieDataUrl?: string; // captured selfie as base64
@@ -44,9 +57,10 @@ export interface FlowState {
   tone?: ToneColors;
   palette?: Palette;
   improvedUrl?: string; // skin projection image
-  skincarePlan?: string[];
-  lookUrl?: string; // current VTO render
-  lookPieces?: { kind: string; label: string; image?: string; applied?: boolean }[];
+  skincarePlan?: PlanEntry[];
+  planMode?: "daily" | "phases";
+  looks?: LookImage[]; // the four rendered looks
+  lookReason?: string;
 }
 
 const KEY = "glowcast-flow";

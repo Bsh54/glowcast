@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { uploadImage, runTask } from "@/lib/youcam";
 import { deepseekJson } from "@/lib/deepseek";
 import { dataUrlToBuffer } from "@/lib/image";
+import { cleanText, cleanHexList } from "@/lib/guard";
 
 export const maxDuration = 300;
 
@@ -120,10 +121,16 @@ Return JSON:
       globalScore,
       tone: color,
       palette: {
-        season: ai.season,
-        colors: ai.colors,
-        avoid: ai.avoid,
-        description: ai.description,
+        season: ["Spring", "Summer", "Autumn", "Winter"].includes(ai.season)
+          ? ai.season
+          : "Autumn",
+        colors: cleanHexList(ai.colors, 8),
+        avoid: cleanHexList(ai.avoid, 3),
+        description: cleanText(
+          ai.description,
+          280,
+          "Your natural coloring shines with warm, rich tones — lean on your palette below."
+        ),
       },
       parsedEvent: ai.event,
     });

@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles, AlertCircle, ChevronsLeftRight } from "lucide-rea
 import StepIndicator from "@/components/StepIndicator";
 import BackButton from "@/components/BackButton";
 import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
+import PlanTimeline from "@/components/PlanTimeline";
 
 /** Screen 4 — before/after skin projection. The divider line is draggable
  *  directly on the image (plus a hidden range input for keyboard access). */
@@ -47,7 +48,11 @@ export default function Projection() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail ?? "Projection failed");
-        const next = saveFlow({ improvedUrl: data.improved, skincarePlan: data.plan });
+        const next = saveFlow({
+          improvedUrl: data.improved,
+          skincarePlan: data.plan,
+          planMode: data.planMode,
+        });
         setFlow(next);
         setLoading(false);
       } catch (e) {
@@ -195,24 +200,9 @@ export default function Projection() {
               <div className="glass mt-8 rounded-3xl p-6">
                 <h2 className="flex items-center gap-2 text-xl">
                   <Sparkles className="w-5 h-5 text-accent" aria-hidden />
-                  Your plan for the next {flow.event?.daysLeft} days
+                  Your {flow.planMode === "daily" ? "day-by-day" : "step-by-step"} plan until the big day
                 </h2>
-                <ol className="mt-4 space-y-3">
-                  {flow.skincarePlan.map((step, i) => (
-                    <motion.li
-                      key={i}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.35, delay: i * 0.08 }}
-                      className="flex gap-3 text-sm"
-                    >
-                      <span className="shrink-0 w-6 h-6 rounded-full bg-secondary text-foreground flex items-center justify-center text-xs font-semibold">
-                        {i + 1}
-                      </span>
-                      {step}
-                    </motion.li>
-                  ))}
-                </ol>
+                <PlanTimeline entries={flow.skincarePlan} />
               </div>
             )}
 
