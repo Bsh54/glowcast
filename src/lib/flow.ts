@@ -46,8 +46,7 @@ export interface FlowState {
   improvedUrl?: string; // skin projection image
   skincarePlan?: string[];
   lookUrl?: string; // current VTO render
-  lookGarmentUrl?: string; // generated garment product shot (example)
-  lookPieces?: { kind: string; label: string }[];
+  lookPieces?: { kind: string; label: string; image?: string; applied?: boolean }[];
 }
 
 const KEY = "glowcast-flow";
