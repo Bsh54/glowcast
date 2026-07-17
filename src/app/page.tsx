@@ -112,7 +112,7 @@ export default function EventLanding() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
-          className="glass mt-10 w-full max-w-2xl rounded-3xl p-6 sm:p-8"
+          className="glass mt-8 sm:mt-10 w-full max-w-2xl rounded-3xl p-4 sm:p-8"
           aria-labelledby="event-title"
         >
           <h2 id="event-title" className="text-xl sm:text-2xl">

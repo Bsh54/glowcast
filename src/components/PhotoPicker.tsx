@@ -30,6 +30,15 @@ export default function PhotoPicker({
 
   useEffect(() => stopCamera, [stopCamera]);
 
+  // The <video> element only mounts after cameraOn flips true — attach the
+  // stream here, not in startCamera, or the preview stays blank.
+  useEffect(() => {
+    if (cameraOn && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [cameraOn]);
+
   async function startCamera() {
     setCameraError(null);
     try {
@@ -38,7 +47,6 @@ export default function PhotoPicker({
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
       setCameraOn(true);
     } catch {
       setCameraError("Camera unavailable — you can upload a photo instead.");

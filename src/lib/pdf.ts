@@ -1,9 +1,9 @@
 import { jsPDF } from "jspdf";
 import type { FlowState } from "@/lib/flow";
 
-/** Builds the GlowCast event-plan PDF client-side and triggers the download.
- *  Editorial layout: cover band, serif title, 2x2 look grid, swatch row,
- *  timeline with page-break handling. */
+/** GlowCast event-plan PDF. Editorial layout: cover band, serif title,
+ *  aspect-preserving look images on white cards, swatch row, timeline.
+ *  `buildPlanPdf` returns the document (testable); `downloadPlanPdf` saves. */
 
 const W = 210;
 const M = 18;
@@ -13,7 +13,32 @@ const INK: [number, number, number] = [131, 24, 67];
 const GREY: [number, number, number] = [100, 116, 139];
 const BG: [number, number, number] = [253, 242, 248];
 
-export async function downloadPlanPdf(flow: FlowState) {
+/** Draws an image inside a box, preserving its natural aspect ratio,
+ *  centered on a white card with a soft border. */
+function drawImageFit(
+  doc: jsPDF,
+  dataUrl: string,
+  x: number,
+  y: number,
+  boxW: number,
+  boxH: number
+) {
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(251, 207, 232);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(x, y, boxW, boxH, 2.5, 2.5, "FD");
+  try {
+    const props = doc.getImageProperties(dataUrl);
+    const scale = Math.min((boxW - 3) / props.width, (boxH - 3) / props.height);
+    const w = props.width * scale;
+    const h = props.height * scale;
+    doc.addImage(dataUrl, "JPEG", x + (boxW - w) / 2, y + (boxH - h) / 2, w, h, undefined, "MEDIUM");
+  } catch {
+    // leave the empty card
+  }
+}
+
+export function buildPlanPdf(flow: FlowState): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   let y = 0;
 
@@ -29,18 +54,20 @@ export async function downloadPlanPdf(flow: FlowState) {
     );
   };
 
+  const newPage = () => {
+    footer();
+    doc.addPage();
+    doc.setFillColor(...BG);
+    doc.rect(0, 0, W, 297, "F");
+    y = 20;
+  };
+
   const ensureRoom = (needed: number) => {
-    if (y + needed > 280) {
-      footer();
-      doc.addPage();
-      doc.setFillColor(...BG);
-      doc.rect(0, 0, W, 297, "F");
-      y = 20;
-    }
+    if (y + needed > 280) newPage();
   };
 
   const sectionTitle = (label: string) => {
-    ensureRoom(16);
+    ensureRoom(18);
     doc.setFont("times", "bold");
     doc.setFontSize(15);
     doc.setTextColor(...INK);
@@ -48,7 +75,7 @@ export async function downloadPlanPdf(flow: FlowState) {
     doc.setDrawColor(...PINK);
     doc.setLineWidth(0.8);
     doc.line(M, y + 1.8, M + 24, y + 1.8);
-    y += 9;
+    y += 10;
   };
 
   // ---------- Page background ----------
@@ -121,40 +148,56 @@ export async function downloadPlanPdf(flow: FlowState) {
     y += desc.slice(0, 3).length * 4.4 + 9;
   }
 
-  // ---------- Looks (2x2 grid) ----------
+  // ---------- Looks (2x2, cell height driven by real image ratios) ----------
   if (flow.looks && flow.looks.length > 0) {
-    const imgW = (W - 2 * M - 8) / 2;
-    const imgH = imgW * (4 / 3) * 0.75; // slightly landscape-cropped cell
-    sectionTitle("Your Looks");
-    ensureRoom(imgH * 2 + 30);
     const looks = flow.looks.slice(0, 4);
-    for (let i = 0; i < looks.length; i++) {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const x = M + col * (imgW + 8);
-      const yy = y + row * (imgH + 14);
+    const cellW = (W - 2 * M - 8) / 2;
+    // Fit height per image so landscape renders don't sit in tall white cards
+    const fitH = looks.map((l) => {
       try {
-        doc.addImage(looks[i].url, "JPEG", x, yy, imgW, imgH, undefined, "MEDIUM");
-        doc.setDrawColor(...PINK);
-        doc.setLineWidth(0.4);
-        doc.roundedRect(x, yy, imgW, imgH, 2, 2, "S");
+        const p = doc.getImageProperties(l.url);
+        return Math.max(42, Math.min(88, (cellW - 3) * (p.height / p.width) + 3));
       } catch {
-        // skip unloadable image
+        return 60;
       }
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(...INK);
-      const label = doc.splitTextToSize(
-        looks[i].style ? `${looks[i].label} — ${looks[i].style}` : looks[i].label,
-        imgW
-      );
-      doc.text(label.slice(0, 1), x + imgW / 2, yy + imgH + 5, { align: "center" });
+    });
+    const rowH = [Math.max(fitH[0] ?? 60, fitH[1] ?? 0), Math.max(fitH[2] ?? 0, fitH[3] ?? 0)];
+
+    // Keep the section title attached to its first row of images
+    if (y + 12 + rowH[0] + 20 > 280) newPage();
+    sectionTitle("Your Looks");
+    let yy = y;
+    for (let row = 0; row < Math.ceil(looks.length / 2); row++) {
+      if (yy + rowH[row] + 12 > 280) {
+        footer();
+        doc.addPage();
+        doc.setFillColor(...BG);
+        doc.rect(0, 0, W, 297, "F");
+        yy = 20;
+      }
+      for (let col = 0; col < 2; col++) {
+        const i = row * 2 + col;
+        if (i >= looks.length) break;
+        const x = M + col * (cellW + 8);
+        drawImageFit(doc, looks[i].url, x, yy, cellW, rowH[row]);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(...INK);
+        const label = doc.splitTextToSize(
+          looks[i].style ? `${looks[i].label} — ${looks[i].style}` : looks[i].label,
+          cellW
+        );
+        doc.text(label.slice(0, 1), x + cellW / 2, yy + rowH[row] + 5, { align: "center" });
+      }
+      yy += rowH[row] + 13;
     }
-    y += Math.ceil(looks.length / 2) * (imgH + 14) + 4;
+    y = yy + 3;
   }
 
   // ---------- Skincare timeline ----------
   if (flow.skincarePlan && flow.skincarePlan.length > 0) {
+    // Keep the title attached to at least the first entry
+    if (y + 34 > 280) newPage();
     sectionTitle("Skincare Plan Until the Big Day");
     for (const e of flow.skincarePlan) {
       const lines: { tag: string; text: string }[] = [];
@@ -189,5 +232,9 @@ export async function downloadPlanPdf(flow: FlowState) {
   }
 
   footer();
-  doc.save("glowcast-event-plan.pdf");
+  return doc;
+}
+
+export async function downloadPlanPdf(flow: FlowState) {
+  buildPlanPdf(flow).save("glowcast-event-plan.pdf");
 }

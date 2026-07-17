@@ -1,4 +1,8 @@
-/** Shared state for the 6-screen GlowCast journey, persisted in sessionStorage. */
+/** Shared state for the 6-screen GlowCast journey.
+ *
+ *  Persistence: in-memory first (always authoritative, zero quota issues),
+ *  mirrored to IndexedDB (no 5MB limit, survives reloads). `FlowProvider`
+ *  hydrates memory from IndexedDB before the app renders. */
 
 export interface EventInfo {
   description: string; // free-text description of the event
@@ -10,7 +14,6 @@ export interface EventInfo {
   daysLeft: number;
   /** Filled from Open-Meteo when the event is within the 16-day forecast window. */
   weather?: { tempMaxC: number; tempMinC: number; condition: string; precipitationChance?: number };
-  // Derived by the AI from the description (filled later)
   parsed?: { kind: string; formality: string; vibe: string };
 }
 
@@ -64,40 +67,89 @@ export interface FlowState {
   lookReason?: string;
 }
 
-const KEY = "glowcast-flow";
+// ---------- IndexedDB mirror (no quota headaches, async, best-effort) ----------
 
-// Photos as data URLs can exceed the sessionStorage quota (~5MB). The
-// in-memory copy is always authoritative; sessionStorage is best-effort
-// so the flow survives a reload when it fits.
-let memoryFlow: FlowState | null = null;
+const DB_NAME = "glowcast";
+const STORE = "flow";
+const RECORD = "state";
 
-export function loadFlow(): FlowState {
-  if (typeof window === "undefined") return {};
-  if (memoryFlow) return memoryFlow;
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(STORE)) {
+        req.result.createObjectStore(STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSet(state: FlowState): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(state, RECORD);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function idbGet(): Promise<FlowState | null> {
+  const db = await openDb();
+  const state = await new Promise<FlowState | null>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).get(RECORD);
+    req.onsuccess = () => resolve((req.result as FlowState) ?? null);
+    req.onerror = () => reject(req.error);
+  });
+  db.close();
+  return state;
+}
+
+async function idbClear(): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(RECORD);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+// ---------- Sync facade over in-memory state ----------
+
+let memoryFlow: FlowState = {};
+let hydrated = false;
+
+/** Loads IndexedDB into memory once, before the app renders (FlowProvider). */
+export async function hydrateFlow(): Promise<void> {
+  if (hydrated || typeof window === "undefined") return;
   try {
-    memoryFlow = JSON.parse(sessionStorage.getItem(KEY) ?? "{}");
+    memoryFlow = (await idbGet()) ?? {};
   } catch {
     memoryFlow = {};
   }
-  return memoryFlow ?? {};
+  hydrated = true;
+}
+
+export function loadFlow(): FlowState {
+  return memoryFlow;
 }
 
 export function saveFlow(patch: Partial<FlowState>): FlowState {
-  const next = { ...loadFlow(), ...patch };
-  memoryFlow = next;
-  try {
-    sessionStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    // Quota exceeded — keep the in-memory copy and move on.
-  }
-  return next;
+  memoryFlow = { ...memoryFlow, ...patch };
+  // Fire-and-forget mirror — memory stays authoritative either way.
+  idbSet(memoryFlow).catch(() => {});
+  return memoryFlow;
 }
 
 export function resetFlow() {
-  memoryFlow = null;
-  try {
-    sessionStorage.removeItem(KEY);
-  } catch {}
+  memoryFlow = {};
+  idbClear().catch(() => {});
 }
 
 export function daysUntil(dateIso: string): number {

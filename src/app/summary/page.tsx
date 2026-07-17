@@ -58,7 +58,7 @@ export default function Summary() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="glass rounded-3xl p-6 sm:p-10"
+          className="glass rounded-3xl p-4 sm:p-10"
         >
           {/* Header */}
           <header className="text-center border-b border-border pb-6">
@@ -95,14 +95,14 @@ export default function Summary() {
               {flow.lookReason && (
                 <p className="mt-1 text-sm text-muted-foreground">{flow.lookReason}</p>
               )}
-              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
                 {flow.looks.map((look) => (
                   <figure key={look.url.slice(-24)} className="relative rounded-2xl overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={look.url}
                       alt={`${look.label} tried on you`}
-                      className="w-full aspect-[3/4] object-cover"
+                      className="w-full h-auto"
                     />
                     <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/65 to-transparent px-2 pb-1.5 pt-6 text-white">
                       <span className="block text-xs font-semibold leading-tight">

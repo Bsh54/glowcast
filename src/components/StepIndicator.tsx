@@ -8,7 +8,7 @@ export default function StepIndicator({ current }: { current: number }) {
   return (
     <nav
       aria-label={`Step ${current} of ${STEPS.length}`}
-      className="flex items-center justify-center gap-2 py-4"
+      className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 py-4 px-14 sm:px-4"
     >
       {STEPS.map((label, i) => {
         const n = i + 1;
@@ -29,7 +29,7 @@ export default function StepIndicator({ current }: { current: number }) {
           </div>
         );
       })}
-      <span className="ml-3 text-xs font-medium tracking-wide text-muted-foreground">
+      <span className="ml-2 sm:ml-3 text-[10px] sm:text-xs font-medium tracking-wide text-muted-foreground whitespace-nowrap">
         Step {current} of {STEPS.length}
       </span>
     </nav>

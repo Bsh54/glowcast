@@ -92,7 +92,7 @@ export default function Look() {
 
   return (
     <main className="iridescent-bg relative flex-1 flex flex-col">
-      <BackButton />
+      <BackButton href={(loadFlow().event?.daysLeft ?? 0) >= 3 ? "/projection" : "/diagnosis"} />
       <StepIndicator current={5} />
 
       <div className="flex-1 w-full max-w-4xl mx-auto px-4 pb-16">
@@ -121,7 +121,7 @@ export default function Look() {
 
         {loading && (
           <div className="mt-10 flex flex-col items-center gap-4" aria-live="polite">
-            <div className="grid grid-cols-2 gap-4 w-full max-w-lg">
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-4 w-full max-w-lg">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="relative aspect-[3/4] rounded-3xl overflow-hidden glass">
                   <div className="skeleton absolute inset-0" />
@@ -191,7 +191,7 @@ export default function Look() {
             )}
 
             {/* The four looks — nothing to pick, just look */}
-            <div className="grid grid-cols-2 gap-4 w-full max-w-2xl">
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-4 w-full max-w-2xl">
               {flow.looks.map((look, i) => (
                 <motion.figure
                   key={look.url.slice(-24)}
@@ -204,7 +204,7 @@ export default function Look() {
                   <img
                     src={look.url}
                     alt={`${look.label} tried on you`}
-                    className="w-full aspect-[3/4] object-cover"
+                    className="w-full h-auto"
                   />
                   <figcaption className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-2.5 pt-8 text-white">
                     <span className="block text-sm font-semibold">{look.label}</span>
