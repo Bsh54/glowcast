@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarDays, MapPin, PenLine, ShieldCheck } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin, PenLine } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
+import WhyWeAskModal from "@/components/WhyWeAskModal";
 import { daysUntil, saveFlow } from "@/lib/flow";
 
 const PLACEHOLDER =
@@ -58,6 +59,7 @@ export default function EventLanding() {
 
   return (
     <main className="iridescent-bg flex-1 flex flex-col">
+      <WhyWeAskModal />
       <StepIndicator current={1} />
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 pb-16">
@@ -190,18 +192,6 @@ export default function EventLanding() {
             <ArrowRight className="w-5 h-5" aria-hidden />
           </button>
 
-          {/* Why we ask — transparency notice */}
-          <div className="mt-5 flex items-start gap-2.5 rounded-2xl bg-muted/60 px-4 py-3">
-            <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-accent" aria-hidden />
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              <span className="font-semibold text-foreground">Why we ask:</span>{" "}
-              your event description sets the dress code and mood of your look,
-              the date lets us build a skincare plan that fits the time you have
-              left, and the city gives us the weather forecast so your outfit
-              works on the day. Nothing is stored beyond your session, and your
-              selfie is only used for the analysis you request.
-            </p>
-          </div>
         </motion.section>
       </div>
     </main>

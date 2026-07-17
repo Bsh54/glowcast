@@ -34,8 +34,8 @@ export interface Palette {
 export interface FlowState {
   event?: EventInfo;
   selfieDataUrl?: string; // captured selfie as base64
+  lookPhotoDataUrl?: string; // optional upper-body photo used for the try-on
   scores?: SkinScores;
-  skinAge?: number;
   globalScore?: number;
   tone?: ToneColors;
   palette?: Palette;

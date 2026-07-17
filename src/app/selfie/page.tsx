@@ -7,8 +7,8 @@ import { Camera, Upload, RefreshCw, Check, AlertCircle } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
 import { loadFlow, saveFlow } from "@/lib/flow";
 
-/** Screen 2 — immersive dark (black + gold variant of the style guide).
- *  Guided selfie capture: camera with a golden face guide, or file upload. */
+/** Screen 2 — guided selfie capture (same light theme as the whole site).
+ *  Compact layout: preview and buttons fit without scrolling. */
 export default function SelfieCapture() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -77,24 +77,24 @@ export default function SelfieCapture() {
   }
 
   return (
-    <main className="flex-1 flex flex-col bg-dark-background text-white">
-      <StepIndicator current={2} dark />
+    <main className="iridescent-bg flex-1 flex flex-col">
+      <StepIndicator current={2} />
 
-      <div className="flex-1 flex flex-col items-center justify-center px-4 pb-12">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="text-center max-w-md"
         >
-          <h1 className="text-3xl sm:text-4xl text-dark-gold-light">Your selfie</h1>
-          <p className="mt-2 text-sm text-white/70">
-            Face the camera straight on, in good light, forehead visible, whole
-            head inside the golden circle.
+          <h1 className="text-2xl sm:text-3xl">Your selfie</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Face the camera straight on, in good light — face and shoulders
+            inside the frame.
           </p>
         </motion.div>
 
-        <div className="relative mt-8 w-full max-w-sm aspect-[3/4] rounded-3xl overflow-hidden glass-dark">
+        <div className="relative mt-4 w-full max-w-[240px] sm:max-w-[280px] aspect-[3/4] rounded-3xl overflow-hidden glass max-h-[45vh]">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview} alt="Your selfie preview" className="w-full h-full object-cover" />
@@ -107,16 +107,16 @@ export default function SelfieCapture() {
               className="w-full h-full object-cover -scale-x-100"
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white/50">
-              <Camera className="w-10 h-10" aria-hidden />
-              <p className="text-sm">Camera preview</p>
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+              <Camera className="w-8 h-8" aria-hidden />
+              <p className="text-xs">Camera preview</p>
             </div>
           )}
 
-          {/* Golden face guide */}
+          {/* Face guide */}
           {!preview && (
             <div aria-hidden className="absolute inset-0 pointer-events-none">
-              <div className="absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2 w-[68%] aspect-[3/4] rounded-full border-2 border-dashed border-dark-gold-light/70" />
+              <div className="absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 w-[62%] aspect-[3/4] rounded-full border-2 border-dashed border-accent/60" />
             </div>
           )}
         </div>
@@ -124,20 +124,20 @@ export default function SelfieCapture() {
         {cameraError && (
           <p
             role="alert"
-            className="mt-4 flex items-center gap-2 text-sm text-amber-300 max-w-sm text-center"
+            className="mt-3 flex items-center gap-2 text-sm text-destructive max-w-sm text-center"
           >
             <AlertCircle className="w-4 h-4 shrink-0" aria-hidden />
             {cameraError}
           </p>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
           {preview ? (
             <>
               <button
                 type="button"
                 onClick={() => setPreview(null)}
-                className="focus-ring tap-target flex items-center gap-2 rounded-2xl border border-dark-border px-5 py-3 text-sm font-medium text-white/80 transition-colors duration-200 hover:border-dark-gold"
+                className="focus-ring tap-target flex items-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium transition-colors duration-200 hover:border-primary/50"
               >
                 <RefreshCw className="w-4 h-4" aria-hidden />
                 Retake
@@ -145,7 +145,7 @@ export default function SelfieCapture() {
               <button
                 type="button"
                 onClick={confirm}
-                className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-dark-gold to-dark-gold-light px-6 py-3 text-sm font-semibold text-dark-primary shadow-lg shadow-dark-gold/25 transition-transform duration-200 hover:scale-[1.02]"
+                className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-on-primary shadow-lg shadow-accent/25 transition-transform duration-200 hover:scale-[1.02]"
               >
                 <Check className="w-4 h-4" aria-hidden />
                 Use this photo
@@ -155,7 +155,7 @@ export default function SelfieCapture() {
             <button
               type="button"
               onClick={capture}
-              className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-dark-gold to-dark-gold-light px-8 py-3.5 text-base font-semibold text-dark-primary shadow-lg shadow-dark-gold/25 transition-transform duration-200 hover:scale-[1.02]"
+              className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-accent px-8 py-3.5 text-base font-semibold text-on-primary shadow-lg shadow-accent/25 transition-transform duration-200 hover:scale-[1.02]"
             >
               <Camera className="w-5 h-5" aria-hidden />
               Capture
@@ -165,7 +165,7 @@ export default function SelfieCapture() {
               <button
                 type="button"
                 onClick={startCamera}
-                className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-dark-gold to-dark-gold-light px-6 py-3 text-sm font-semibold text-dark-primary shadow-lg shadow-dark-gold/25 transition-transform duration-200 hover:scale-[1.02]"
+                className="focus-ring tap-target flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-accent px-6 py-3 text-sm font-semibold text-on-primary shadow-lg shadow-accent/25 transition-transform duration-200 hover:scale-[1.02]"
               >
                 <Camera className="w-4 h-4" aria-hidden />
                 Open camera
@@ -173,7 +173,7 @@ export default function SelfieCapture() {
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="focus-ring tap-target flex items-center gap-2 rounded-2xl border border-dark-border px-5 py-3 text-sm font-medium text-white/80 transition-colors duration-200 hover:border-dark-gold"
+                className="focus-ring tap-target flex items-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium transition-colors duration-200 hover:border-primary/50"
               >
                 <Upload className="w-4 h-4" aria-hidden />
                 Upload a photo
@@ -190,7 +190,7 @@ export default function SelfieCapture() {
           )}
         </div>
 
-        <p className="mt-6 text-xs text-white/40 max-w-sm text-center">
+        <p className="mt-4 text-xs text-muted-foreground/70 max-w-sm text-center">
           Your photo is only used for the analysis you request and is never kept
           beyond your session.
         </p>

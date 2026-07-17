@@ -3,18 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
+import { ArrowRight, Sparkles, AlertCircle, ChevronsLeftRight } from "lucide-react";
 import StepIndicator from "@/components/StepIndicator";
 import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
 
-/** Screen 4 — before/after skin projection with a draggable slider.
- *  Muted "today" vs vibrant "potential" (style guide page override). */
+/** Screen 4 — before/after skin projection. The divider line is draggable
+ *  directly on the image (plus a hidden range input for keyboard access). */
 export default function Projection() {
   const router = useRouter();
   const [flow, setFlow] = useState<FlowState>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [slider, setSlider] = useState(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
   const ran = useRef(false);
 
   useEffect(() => {
@@ -54,8 +56,16 @@ export default function Projection() {
     })();
   }, [router]);
 
+  function setFromClientX(clientX: number) {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const pct = ((clientX - rect.left) / rect.width) * 100;
+    setSlider(Math.min(95, Math.max(5, pct)));
+  }
+
   return (
-    <main className="flex-1 flex flex-col bg-background">
+    <main className="iridescent-bg flex-1 flex flex-col">
       <StepIndicator current={4} />
 
       <div className="flex-1 w-full max-w-3xl mx-auto px-4 pb-16">
@@ -97,38 +107,59 @@ export default function Projection() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            {/* Before/after slider */}
-            <div className="relative mt-8 mx-auto max-w-md aspect-[4/3] rounded-3xl overflow-hidden select-none glass">
+            {/* Before/after — drag the line directly on the image */}
+            <div
+              ref={containerRef}
+              className="relative mt-8 mx-auto max-w-md aspect-[4/3] rounded-3xl overflow-hidden select-none glass touch-none cursor-ew-resize"
+              onPointerDown={(e) => {
+                dragging.current = true;
+                (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                setFromClientX(e.clientX);
+              }}
+              onPointerMove={(e) => {
+                if (dragging.current) setFromClientX(e.clientX);
+              }}
+              onPointerUp={() => (dragging.current = false)}
+              onPointerCancel={() => (dragging.current = false)}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={flow.improvedUrl}
                 alt="Your skin with the right care"
                 className="absolute inset-0 w-full h-full object-cover"
+                draggable={false}
               />
-              <div
-                className="absolute inset-0 overflow-hidden"
-                style={{ width: `${slider}%` }}
-              >
+              <div className="absolute inset-0 overflow-hidden" style={{ width: `${slider}%` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={flow.selfieDataUrl}
                   alt="Your skin today"
-                  className="w-full h-full object-cover saturate-[0.85]"
+                  className="h-full object-cover saturate-[0.85]"
                   style={{ width: `${10000 / slider}%`, maxWidth: "none" }}
+                  draggable={false}
                 />
               </div>
+
+              {/* Draggable divider line + handle */}
               <div
                 aria-hidden
                 className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg"
                 style={{ left: `${slider}%` }}
-              />
-              <span className="absolute top-3 left-3 rounded-full bg-black/50 px-3 py-1 text-xs text-white">
+              >
+                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-white shadow-lg flex items-center justify-center">
+                  <ChevronsLeftRight className="w-4 h-4 text-primary" />
+                </div>
+              </div>
+
+              <span className="absolute top-3 left-3 rounded-full bg-black/50 px-3 py-1 text-xs text-white pointer-events-none">
                 Today
               </span>
-              <span className="absolute top-3 right-3 rounded-full bg-primary/80 px-3 py-1 text-xs text-white">
+              <span className="absolute top-3 right-3 rounded-full bg-primary/80 px-3 py-1 text-xs text-white pointer-events-none">
                 Your potential
               </span>
             </div>
+
+            {/* Keyboard-accessible fallback */}
             <label htmlFor="ba-slider" className="sr-only">
               Compare before and after
             </label>
@@ -137,9 +168,9 @@ export default function Projection() {
               type="range"
               min={5}
               max={95}
-              value={slider}
+              value={Math.round(slider)}
               onChange={(e) => setSlider(Number(e.target.value))}
-              className="mt-4 w-full max-w-md mx-auto block accent-[#ec4899]"
+              className="sr-only"
             />
 
             {/* Skincare plan */}

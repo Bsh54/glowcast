@@ -32,7 +32,7 @@ export default function Summary() {
     : "";
 
   return (
-    <main className="flex-1 flex flex-col bg-background">
+    <main className="iridescent-bg flex-1 flex flex-col">
       <div className="print:hidden">
         <StepIndicator current={6} />
       </div>
@@ -128,9 +128,6 @@ export default function Summary() {
                   <span className="font-semibold text-primary tabular-nums">
                     {flow.globalScore}/100
                   </span>
-                  {flow.skinAge != null && (
-                    <span className="text-muted-foreground"> · skin age {flow.skinAge}</span>
-                  )}
                 </section>
               )}
             </div>

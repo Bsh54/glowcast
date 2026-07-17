@@ -71,7 +71,6 @@ export default function Diagnosis() {
         const next = saveFlow({
           scores: data.scores,
           globalScore: data.globalScore,
-          skinAge: data.skinAge,
           tone: data.tone,
           palette: data.palette,
           event: f.event ? { ...f.event, parsed: data.parsedEvent } : f.event,
@@ -92,7 +91,7 @@ export default function Diagnosis() {
   const nextStep = (flow.event?.daysLeft ?? 0) >= 3 ? "/projection" : "/look";
 
   return (
-    <main className="flex-1 flex flex-col bg-background">
+    <main className="iridescent-bg flex-1 flex flex-col">
       <StepIndicator current={3} />
 
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 pb-16">
@@ -160,12 +159,6 @@ export default function Diagnosis() {
                 {flow.globalScore ?? "–"}
                 <span className="text-lg text-muted-foreground">/100</span>
               </p>
-              {flow.skinAge != null && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Estimated skin age:{" "}
-                  <span className="font-semibold text-foreground">{flow.skinAge}</span>
-                </p>
-              )}
             </div>
 
             {/* Right column: gauges */}

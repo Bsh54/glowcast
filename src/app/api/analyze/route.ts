@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadImage, runTask, findUrls } from "@/lib/youcam";
+import { uploadImage, runTask } from "@/lib/youcam";
 import { deepseekJson } from "@/lib/deepseek";
 import { dataUrlToBuffer } from "@/lib/image";
 
@@ -68,22 +68,28 @@ export async function POST(req: NextRequest) {
 
     const results = skin.results as {
       output?: { type: string; ui_score: number; raw_score: number; mask_urls?: string[] }[];
-      score_info?: { all?: { ui_score?: number }; skin_age?: number };
     };
+    // The output also contains technical entries ("all", "skin_age",
+    // "resize_image") — keep only the requested concerns as gauges.
     const scores: Record<string, { ui_score: number; raw_score: number; maskUrl?: string }> = {};
+    let globalScore: number | undefined;
     for (const o of results?.output ?? []) {
-      scores[o.type] = {
-        ui_score: o.ui_score,
-        raw_score: o.raw_score,
-        maskUrl: o.mask_urls?.[0],
-      };
+      if (o.type === "all") {
+        globalScore = o.ui_score;
+      } else if (SD_ACTIONS.includes(o.type)) {
+        scores[o.type] = {
+          ui_score: o.ui_score,
+          raw_score: o.raw_score,
+          maskUrl: o.mask_urls?.[0],
+        };
+      }
     }
-    const globalScore =
-      results?.score_info?.all?.ui_score ??
-      Math.round(
+    if (globalScore == null) {
+      globalScore = Math.round(
         Object.values(scores).reduce((s, v) => s + v.ui_score, 0) /
           Math.max(1, Object.keys(scores).length)
       );
+    }
 
     const toneResults = tone.results as { color?: Record<string, string> };
     const color = toneResults?.color ?? {};
@@ -106,7 +112,6 @@ Return JSON:
     return NextResponse.json({
       scores,
       globalScore,
-      skinAge: results?.score_info?.skin_age,
       tone: color,
       palette: {
         season: ai.season,
@@ -115,7 +120,6 @@ Return JSON:
         description: ai.description,
       },
       parsedEvent: ai.event,
-      debugUrls: findUrls(skin.results).length,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown_error";
