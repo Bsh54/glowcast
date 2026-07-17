@@ -174,7 +174,7 @@ export default function Diagnosis() {
                   Tap a score to see where it was detected on your face
                 </p>
               </div>
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-6">
+              <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
                 {Object.entries(flow.scores).map(([key, v], i) => (
                   <motion.div
                     key={key}
@@ -194,11 +194,6 @@ export default function Diagnosis() {
                     >
                       <ScoreGauge label={CONCERN_LABELS[key] ?? key} value={v.ui_score} />
                     </button>
-                    {flow.insights?.[key] && (
-                      <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground text-center px-1">
-                        {flow.insights[key]}
-                      </p>
-                    )}
                   </motion.div>
                 ))}
               </div>
@@ -216,20 +211,13 @@ export default function Diagnosis() {
                     alt={`Areas of ${CONCERN_LABELS[selected] ?? selected} detected on your face`}
                     className="w-full max-w-sm mx-auto rounded-2xl"
                   />
-                  <figcaption className="mt-2 text-xs text-muted-foreground text-center">
-                    Highlighted: where {(CONCERN_LABELS[selected] ?? selected).toLowerCase()} was
-                    detected on your photo.
+                  <figcaption className="mt-2 text-xs text-muted-foreground text-center max-w-sm mx-auto">
+                    {flow.insights?.[selected] ??
+                      `Highlighted: where ${(CONCERN_LABELS[selected] ?? selected).toLowerCase()} was detected on your photo.`}
                   </figcaption>
                 </motion.figure>
               )}
 
-              <p className="mt-5 text-[11px] leading-relaxed text-muted-foreground/80 border-t border-border pt-3">
-                How is this measured? Your photo is analyzed by YouCam&apos;s skin AI —
-                the same engine used by 800+ beauty brands. Each concern is scored
-                from the image (1–100, higher is better) and mapped to the exact
-                facial areas shown above. It&apos;s a cosmetic reading, not a medical
-                diagnosis.
-              </p>
             </div>
 
             {/* Palette — full width */}
