@@ -10,6 +10,17 @@ import PhotoPicker from "@/components/PhotoPicker";
 import LookCard from "@/components/LookCard";
 import { loadFlow, saveFlow, setFittingPhoto, type FlowState, type LookImage } from "@/lib/flow";
 
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function readJson(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: "server_error", detail: text.slice(0, 120) || res.statusText };
+  }
+}
+
 /** Screen 5 — four looks rendered on the user, shown together.
  *  Nothing to pick: the four directions ARE the result. */
 export default function Look() {
@@ -40,7 +51,7 @@ export default function Look() {
           excludeIds: adjustment ? tried : [],
         }),
       });
-      const data = await res.json();
+      const data = await readJson(res);
       if (!res.ok) {
         const detail = String(data.detail ?? "");
         if (detail.includes("pose") || detail.includes("body") || detail.includes("face")) {

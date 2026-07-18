@@ -8,6 +8,17 @@ import StepIndicator from "@/components/StepIndicator";
 import BackButton from "@/components/BackButton";
 import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
 
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function readJson(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: "server_error", detail: text.slice(0, 120) || res.statusText };
+  }
+}
+
 /** Screen 4 — before/after skin projection. The divider line is draggable
  *  directly on the image (plus a hidden range input for keyboard access). */
 export default function Projection() {
@@ -47,11 +58,15 @@ export default function Projection() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             selfie: f.selfieDataUrl,
-            scores: f.scores,
+            // Numeric scores only — mask images must never travel back up
+            // (they exceed the request size limit).
+            scores: Object.fromEntries(
+              Object.entries(f.scores ?? {}).map(([k, v]) => [k, { ui_score: v.ui_score }])
+            ),
             daysLeft: f.event?.daysLeft ?? 7,
           }),
         });
-        const data = await res.json();
+        const data = await readJson(res);
         if (!res.ok) throw new Error(data.detail ?? "Projection failed");
         const next = saveFlow({
           improvedUrl: data.improved,

@@ -9,6 +9,17 @@ import BackButton from "@/components/BackButton";
 import ScoreGauge from "@/components/ScoreGauge";
 import { loadFlow, saveFlow, type FlowState } from "@/lib/flow";
 
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function readJson(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: "server_error", detail: text.slice(0, 120) || res.statusText };
+  }
+}
+
 const CONCERN_LABELS: Record<string, string> = {
   moisture: "Hydration",
   radiance: "Radiance",
@@ -62,7 +73,7 @@ export default function Diagnosis() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ selfie: f.selfieDataUrl, event: f.event }),
         });
-        const data = await res.json();
+        const data = await readJson(res);
         if (!res.ok) {
           throw new Error(
             data.detail === "error_no_face" || String(data.detail).includes("face")
