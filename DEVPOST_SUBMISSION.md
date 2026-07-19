@@ -94,3 +94,37 @@ nextjs, react, typescript, tailwindcss, framer-motion, vercel, youcam-api, perfe
 13. Summary — full page
 14. The downloaded PDF (page 1)
 15. The downloaded PDF (looks + timeline)
+
+---
+
+# Additional info (for judges — copy-paste answers)
+
+## What date did you start this project? (MM-DD-YY)
+07-17-26
+
+## App Status
+New
+
+## Text description (features, functionality, and consumer or retail value)
+
+GlowCast turns event anxiety into a concrete plan. The user describes their event in free text (an AI agent extracts dress code and mood), picks the date and a validated city (real weather forecast for the day), and takes one guided selfie. YouCam Skin Analysis scores 8 concerns with tappable on-face detection overlays; YouCam Facial Color Tones feeds an AI-derived color season and personal 8-shade palette. A generative before/after (YouCam AI Image Generator, image-to-image) shows the skin's potential, paired with a day-by-day skincare timeline grounded in published dermatology guidance. Then the AI stylist selects four outfits from a 250-template catalog — matched to event, palette and weather — and YouCam Clothes VTO renders all four on the user's own body in parallel. Everything lands in a summary and a downloadable PDF: the four looks, the palette hex codes to show in-store, and the plan.
+
+Consumer value: three purchase-critical guesses (skin readiness, flattering colors, outfit fit) replaced by evidence the user can see on themselves before spending anything. Retail value: an embeddable "event concierge" — virtual try-on is proven to lift conversion 20–40% and cut returns up to 40% (fit causes ~50% of apparel returns), while the event description ("wedding, Aug 1st, Paris") is purchase-intent data no e-commerce site captures today.
+
+## Code repository URL
+https://github.com/Bsh54/glowcast
+
+## Was there a moment during the hackathon where the API surprised you — in a good or frustrating way?
+
+Both, honestly. The best surprise was Clothes VTO in reference mode: we generated a garment as a product shot with the AI Image Generator, fed it as ref_file_id, and it dressed our test subject convincingly — outfit, drape and shadows — while preserving identity, pose and background. Chaining try-ons (applying a generated hat *on top of a previous VTO render*) also worked, which we didn't expect. The frustrating one: the Skin Simulation endpoint accepted our tasks but never completed them (still `running` after 15 minutes of continuous polling, units consumed). We rebuilt the skin projection on the AI Image Generator instead — it turned out cheaper (1 unit vs 4–6) and faster.
+
+## Are there industries or use cases you think Perfect Corp.'s API could serve that nobody is talking about yet?
+
+- **Aesthetic-medicine consultation & consent:** scored, longitudinal skin data plus before/after simulation is a natural fit for treatment expectation-setting and follow-up adherence — a regulated-adjacent space where the cosmetic-grade framing is actually an advantage.
+- **Event & wedding services:** planners, photographers and venues could bundle a "camera-ready" prep journey (our thesis) — nobody treats the event date as the organizing principle of beauty + fashion decisions.
+- **Second-hand fashion marketplaces:** ref-based VTO on user-listed garment photos could de-risk peer-to-peer purchases where returns are usually impossible.
+- **Workforce imaging:** interview-prep platforms and professional-headshot services could combine skin scoring, color analysis and try-on for job seekers.
+
+## Where did you hit a wall technically? How did you work around it?
+
+Three walls. (1) The framing paradox: Skin Analysis requires a large frontal face (≥60% width) while Clothes VTO requires the upper body — one photo can't reliably serve both. We added client-side smart face auto-crop for the analysis selfie and a separate guided "fitting photo" step for try-on. (2) Infrastructure friction: file IDs are single-use per feature, result URLs expire in ~2h, and our re-encoded mask overlays later blew past the serverless 4.5MB request limit (a plain-text 413 crashing JSON parsing). We now re-upload per task, re-encode all results server-side, send only numeric scores upstream, and parse every response defensively. (3) LLM drift in advice: we locked outputs to strict JSON, added a banned-claims filter, and grounded the coach in a curated dermatology reference (AAD guidance, ingredient concentrations, pre-event timelines) — advice went from generic to specific overnight.
