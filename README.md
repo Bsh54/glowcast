@@ -4,7 +4,7 @@
 
 GlowCast is an AI event-preparation concierge built for the [YouCam API Skin AI & Apparel VTO Hackathon](https://youcam-api.devpost.com/) (topic 3: Skin AI + Apparel VTO combined). Describe your event in your own words, take one selfie, and leave with a skin diagnosis, your personal color palette, a skincare timeline, and four outfits rendered on your own body — all in one downloadable plan.
 
-- **Live demo:** https://glowcast.vercel.app *(replace with your deployment URL)*
+- **Live demo:** [https://glowcast.vercel.app ](https://glowcast-two.vercel.app/)*
 - **Demo video:** *(YouTube link)*
 
 ---
